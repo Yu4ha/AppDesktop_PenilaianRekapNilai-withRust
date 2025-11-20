@@ -923,6 +923,7 @@ pub fn hitung_nilai_akhir_kelulusan(siswa_id: i64, mapel_id: i64) -> SqlResult<N
 // ==========================
 
 /// Save kehadiran dengan auto-calculate nilai
+/// Save kehadiran dengan auto-calculate nilai
 pub fn save_kehadiran(
     siswa_id: i64,
     kelas: &str,
@@ -953,17 +954,15 @@ pub fn save_kehadiran(
     // Hitung nilai kehadiran (0-100)
     let nilai_kehadiran = ((hadir as f64 / total_pertemuan as f64) * 10000.0).round() / 100.0;
 
-    // Get dummy mapel_id (first mapel)
-    let dummy_mapel_id = get_first_mapel_id()?;
-
     let db = database::get_db();
     let db_lock = db.lock().unwrap();
     
     if let Some(ref conn) = *db_lock {
-        // Cek apakah sudah ada data kehadiran
+        // ✅ FIXED: Cek dengan mapel_id IS NULL
         let existing: Option<i64> = conn.query_row(
             "SELECT id FROM nilai
-             WHERE siswa_id = ?1 AND kelas = ?2 AND semester = ?3 
+             WHERE siswa_id = ?1 AND mapel_id IS NULL 
+               AND kelas = ?2 AND semester = ?3 
                AND tahun_ajaran = ?4 AND jenis = 'Kehadiran'",
             params![siswa_id, kelas, semester, tahun_ajaran],
             |row| row.get(0),
@@ -983,12 +982,12 @@ pub fn save_kehadiran(
                   id, siswa_id, nilai_kehadiran);
             id
         } else {
-            // Insert new
+            // ✅ FIXED: Insert dengan mapel_id = NULL
             conn.execute(
                 "INSERT INTO nilai (siswa_id, mapel_id, kelas, semester, tahun_ajaran, 
                                    jenis, nilai, hadir, sakit, izin, alpa)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 'Kehadiran', ?6, ?7, ?8, ?9, ?10)",
-                params![siswa_id, dummy_mapel_id, kelas, semester, tahun_ajaran,
+                 VALUES (?1, NULL, ?2, ?3, ?4, 'Kehadiran', ?5, ?6, ?7, ?8, ?9)",
+                params![siswa_id, kelas, semester, tahun_ajaran,
                        nilai_kehadiran, hadir, sakit, izin, alpa],
             )?;
 
@@ -1015,6 +1014,7 @@ pub fn save_kehadiran(
 }
 
 /// Get kehadiran siswa
+/// Get kehadiran siswa
 pub fn get_kehadiran(
     siswa_id: i64,
     kelas: &str,
@@ -1025,10 +1025,12 @@ pub fn get_kehadiran(
     let db_lock = db.lock().unwrap();
     
     if let Some(ref conn) = *db_lock {
+        // ✅ FIXED: Filter dengan mapel_id IS NULL
         let result = conn.query_row(
             "SELECT id, nilai, hadir, sakit, izin, alpa
              FROM nilai
-             WHERE siswa_id = ?1 AND kelas = ?2 AND semester = ?3 
+             WHERE siswa_id = ?1 AND mapel_id IS NULL 
+               AND kelas = ?2 AND semester = ?3 
                AND tahun_ajaran = ?4 AND jenis = 'Kehadiran'",
             params![siswa_id, kelas, semester, tahun_ajaran],
             |row| {
@@ -1061,30 +1063,15 @@ pub fn get_kehadiran(
     }
 }
 
-/// Helper: Get first mapel ID
-fn get_first_mapel_id() -> SqlResult<i64> {
-    let db = database::get_db();
-    let db_lock = db.lock().unwrap();
-    
-    if let Some(ref conn) = *db_lock {
-        conn.query_row(
-            "SELECT id FROM mapel ORDER BY id ASC LIMIT 1",
-            [],
-            |row| row.get(0),
-        )
-    } else {
-        Err(rusqlite::Error::InvalidQuery)
-    }
-}
-
 /// Delete kehadiran
 pub fn delete_kehadiran(id: i64) -> SqlResult<bool> {
     let db = database::get_db();
     let db_lock = db.lock().unwrap();
     
     if let Some(ref conn) = *db_lock {
+        // ✅ FIXED: Tambah filter mapel_id IS NULL
         let changes = conn.execute(
-            "DELETE FROM nilai WHERE id = ?1 AND jenis = 'Kehadiran'",
+            "DELETE FROM nilai WHERE id = ?1 AND mapel_id IS NULL AND jenis = 'Kehadiran'",
             params![id],
         )?;
         

@@ -275,6 +275,73 @@ pub async fn get_nilai_siswa_by_mapel(
 // KEHADIRAN COMMANDS (v5.1)
 // ==========================
 
+// Tambahkan di bagian KEHADIRAN COMMANDS (v5.1)
+
+/// Update kehadiran yang sudah ada
+#[tauri::command]
+pub async fn update_kehadiran(
+    id: i64,
+    hadir: Option<i32>,
+    sakit: Option<i32>,
+    izin: Option<i32>,
+    alpa: Option<i32>,
+) -> Result<ApiResponse<nilai::KehadiranData>, String> {
+    info!("Command: update_kehadiran - id={}", id);
+
+    match nilai::update_kehadiran(id, hadir, sakit, izin, alpa) {
+        Ok(data) => {
+            info!("Kehadiran berhasil diupdate: id={}, nilai={}", id, data.nilai);
+            Ok(ApiResponse::success(data))
+        }
+        Err(e) => {
+            error!("Gagal update kehadiran: {}", e);
+            Err(format!("Gagal update kehadiran: {}", e))
+        }
+    }
+}
+
+/// Get list kehadiran per kelas dan semester
+#[tauri::command]
+pub async fn get_kehadiran_by_kelas(
+    kelas: String,
+    semester: i32,
+    tahun_ajaran: String,
+) -> Result<ApiResponse<Vec<nilai::KehadiranWithSiswa>>, String> {
+    info!("Command: get_kehadiran_by_kelas - kelas={}, semester={}, tahun_ajaran={}", 
+          kelas, semester, tahun_ajaran);
+
+    match nilai::get_kehadiran_by_kelas(&kelas, semester, &tahun_ajaran) {
+        Ok(data) => {
+            info!("Berhasil get {} data kehadiran untuk kelas {}", data.len(), kelas);
+            Ok(ApiResponse::success(data))
+        }
+        Err(e) => {
+            error!("Gagal get kehadiran by kelas: {}", e);
+            Err(format!("Gagal mengambil data kehadiran: {}", e))
+        }
+    }
+}
+
+/// Get semua kehadiran siswa (untuk rekap)
+#[tauri::command]
+pub async fn get_all_kehadiran(
+    semester: Option<i32>,
+    tahun_ajaran: Option<String>,
+) -> Result<ApiResponse<Vec<nilai::KehadiranWithSiswa>>, String> {
+    info!("Command: get_all_kehadiran");
+
+    match nilai::get_all_kehadiran(semester, tahun_ajaran.as_deref()) {
+        Ok(data) => {
+            info!("Berhasil get {} data kehadiran", data.len());
+            Ok(ApiResponse::success(data))
+        }
+        Err(e) => {
+            error!("Gagal get all kehadiran: {}", e);
+            Err(format!("Gagal mengambil semua data kehadiran: {}", e))
+        }
+    }
+}
+
 /// Save kehadiran dengan auto-calculate
 #[tauri::command]
 pub async fn save_kehadiran(req: SaveKehadiranRequest) -> Result<ApiResponse<nilai::KehadiranData>, String> {
