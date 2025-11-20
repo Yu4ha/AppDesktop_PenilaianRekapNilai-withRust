@@ -28,28 +28,3 @@ src-tauri/
     └── logic/
         ├── mod.rs          ⭐ Module export
         └── penilaian.rs    ⭐ Business logic (ranking, kelulusan)
-
-
-<!-- ============================================== -->
-    PANDUAN RELATE (KALAU MASIH RELATE ITU JUGA)
-<!-- ============================================== -->
-
-# 🚀 Panduan Integrasi Backend Rust - Sistem Penilaian v5.1
-
-## 📁 Struktur File yang Sudah Dibuat
-
-```
-src-tauri/src/
-├── database.rs              ✅ DONE (Database Layer)
-├── models/
-│   ├── mod.rs              ⏳ TODO
-│   └── nilai.rs            ✅ DONE (Data Model Layer - 850 lines)
-├── logic/
-│   ├── mod.rs              ⏳ TODO
-│   └── penilaian.rs        ✅ DONE (Business Logic - 1000 lines)
-├── commands/
-│   ├── mod.rs              ✅ DONE (Module Export)
-│   ├── nilai.rs            ✅ DONE (19 Tauri Commands)
-│   └── penilaian.rs        ✅ DONE (17 Tauri Commands)
-└── main.rs                 ⏳ TODO (Update with commands)
-```
