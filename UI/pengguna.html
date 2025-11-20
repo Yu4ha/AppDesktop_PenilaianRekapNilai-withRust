@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./CSS/index.css">
+  <link rel="stylesheet" href="./CSS/indexMapel.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="./CSS/pengguna.css">
+  <title>Sistem Penilaian & Rekap Nilai | Panduan Penggunaan</title>
+</head>
+<body class="app-layout">
+  <!-- sidebar  -->
+  <aside class="sidebar">
+    <a href="index.html" style="text-decoration: none; color: white;" title="Kembali ke halaman dashboard"><div class="sidebar-header d-flex flex-column align-items-center text-center gap-3">
+      <img src="./assets/icon.png" alt="Logo" class="sidebar-logo" style="width: 50%;">
+      <h2 class="sidebar-title mb-0">Panduan Pengguna</h2>
+    </div>
+    </a>
+
+    <nav class="nav">
+      <a href="index.html" class="nav-item active">
+        <span class="icon">🏠</span>
+        <span class="label">Beranda</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <!-- <button id="logoutBtn" title="Tutup Aplikasi">Keluar</button> -->
+    <footer class="text-white text-center py-2">
+      <small>© 2025 PKM1 | Free Software & Open Source Project. Licensed under the GPLv3.</small>
+    </footer>
+    </div>
+  </aside>
+  
+  <!-- content -->
+  <main class="main-content">
+    <header title="Klik untuk ganti nama mu">
+      <h1 id="guruHeader" style="cursor:pointer;">Selamat datang, Guru 👋</h1>
+      <p>Pelajari cara menggunakan <strong>Aplikasi Sistem Penilaian & Rekap Nilai</strong> untuk mengelola data penilaian dan rekapitulasi penilaian.</p>
+    </header>
+    
+    <div class="table-container">
+      <h2>🔧 Panduan Penggunaan (User Manual)</h2>
+      <div class="table-responsive">
+
+        <!-- ========== PENDAHULUAN ========== -->
+        <section class="panduan-section">
+          <h3>📖 Tentang Aplikasi</h3>
+          <p>
+            <strong>Sistem Penilaian & Rekap Nilai</strong> adalah aplikasi yang dirancang khusus untuk memudahkan guru dalam mengelola data siswa, nilai, absensi, dan membuat laporan kelulusan secara otomatis dan efisien.
+          </p>
+          <div class="feature-box">
+            <strong>✨ Fitur Utama Aplikasi:</strong><br>
+            Kelola Data Siswa • Mata Pelajaran • Penilaian • Absensi • Rekap Nilai • Laporan Kelulusan • Ranking Siswa
+          </div>
+        </section>
+
+        <!-- ========== NAVIGASI APLIKASI ========== -->
+        <section class="panduan-section">
+          <h3>🧭 Menu Navigasi</h3>
+          
+          <div class="navigation-menu">
+            <div class="menu-item-guide">
+              <strong>🏠 Beranda</strong><br>
+              <span class="text-muted">Dashboard dengan statistik lengkap dan ranking siswa terbaik</span>
+            </div>
+
+            <div class="section-divider">Data Master</div>
+            
+            <div class="menu-item-guide">
+              <strong>📁 Data Siswa</strong><br>
+              <span class="text-muted">Tambah, edit, dan hapus data siswa secara lengkap</span>
+            </div>
+            
+            <div class="menu-item-guide">
+              <strong>📚 Mata Pelajaran</strong><br>
+              <span class="text-muted">Kelola mata pelajaran dan tentukan nilai KKM</span>
+            </div>
+
+            <div class="section-divider">Penilaian</div>
+            
+            <div class="menu-item-guide">
+              <strong>📊 Penilaian</strong><br>
+              <span class="text-muted">Input dan kelola nilai siswa per mata pelajaran</span>
+            </div>
+            
+            <div class="menu-item-guide">
+              <strong>🕒 Absensi</strong><br>
+              <span class="text-muted">Catat & Nilai kehadiran siswa</span>
+            </div>
+
+            <div class="section-divider">Cetak Laporan</div>
+            
+            <div class="menu-item-guide">
+              <strong>🧾 Rekap Nilai</strong><br>
+              <span class="text-muted">Lihat dan cetak rekapitulasi nilai siswa</span>
+            </div>
+            
+            <div class="menu-item-guide">
+              <strong>🎓 Laporan Kelulusan</strong><br>
+              <span class="text-muted">Lihat dan cetak nilai kelulusan siswa</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN DASHBOARD ========== -->
+        <section class="panduan-section">
+          <h3>🏠 Dashboard (Beranda)</h3>
+          
+          <div class="step-item">
+            <strong>📊 Panel Statistik</strong>
+            <p>Menampilkan 4 kotak informasi penting:</p>
+            <ul class="mb-0">
+              <li>Total Siswa terdaftar</li>
+              <li>Jumlah Mata Pelajaran</li>
+              <li>Total Penilaian yang telah dilakukan</li>
+              <li>Rata-rata Nilai keseluruhan (per-1 semester)</li>
+            </ul>
+          </div>
+
+          <div class="step-item">
+            <strong>🏆 Ranking Siswa</strong>
+            <p>Tabel peringkat siswa berdasarkan rata-rata nilai tertinggi. Peringkat 1-3 akan ditandai dengan badge medali emas, perak, dan perunggu.</p>
+            <p>💡 Tips: Klik tombol <b>Refresh</b> untuk memperbarui isi tabel.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>✏️ Personalisasi Nama</strong>
+            <p class="mb-0">Klik pada header "Selamat datang, Guru 👋" untuk mengubah nama pengguna sesuai keinginan Anda.</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN DATA SISWA ========== -->
+        <section class="panduan-section">
+          <h3>📁 Data Siswa</h3>
+          <p>Kelola data siswa meliputi informasi pribadi, orang tua, dan wali.</p>
+          
+          <div class="step-item">
+            <strong>➕ Tambah Siswa</strong>
+            <p class="mb-2">Klik tombol "Tambah Siswa" => Isi formulir => Simpan. Field bertanda bintang merah (<span class="text-danger">*</span>) wajib diisi.</p>
+            <p class="mb-0"><strong>Formulir terdiri dari:</strong> Data Siswa (NIS, NISN, Nama, Kelas, JK) • Data Orang Tua (Nama, Pekerjaan, Alamat, Kontak, Email) • Data Wali (opsional)</p>
+          </div>
+
+          <div class="step-item">
+            <strong>✏️ Edit & 🗑️ Hapus</strong>
+            <p class="mb-1"><b>Edit:</b> Klik ikon pensil di kolom Aksi => Ubah data => Simpan</p>
+            <p class="mb-0"><b>Hapus:</b> Klik ikon tempat sampah => Konfirmasi. ⚠️ Data tidak dapat dikembalikan!</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🔍 Pencarian</strong>
+            <p class="mb-0">Gunakan kotak pencarian untuk filter data berdasarkan Nama atau NIS siswa.</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN MATA PELAJARAN ========== -->
+        <section class="panduan-section">
+          <h3>📚 Mata Pelajaran</h3>
+          <p>Kelola mata pelajaran dan tentukan nilai KKM (Kriteria Ketuntasan Minimal) untuk setiap mata pelajaran.</p>
+          
+          <div class="step-item">
+            <strong>➕ Tambah Mata Pelajaran</strong>
+            <p class="mb-0">Klik tombol "Tambah Mapel" => Isi Nama Mata Pelajaran dan KKM (0-100) => Simpan. Kedua field wajib diisi.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>✏️ Edit & 🗑️ Hapus</strong>
+            <p class="mb-1"><b>Edit:</b> Klik ikon pensil di kolom Aksi => Ubah nama atau KKM => Simpan</p>
+            <p class="mb-0"><b>Hapus:</b> Klik ikon tempat sampah => Konfirmasi. ⚠️ Hati-hati menghapus mapel yang sudah memiliki nilai!</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🔍 Pencarian</strong>
+            <p class="mb-0">Gunakan kotak pencarian untuk mencari mata pelajaran berdasarkan nama.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>📊 Statistik Mata Pelajaran</strong>
+            <p class="mb-0">Panel statistik menampilkan: Total Mapel • Rata-rata KKM • KKM Tertinggi • KKM Terendah. Data diperbarui otomatis saat ada perubahan.</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN PENILAIAN ========== -->
+        <section class="panduan-section">
+          <h3>📊 Penilaian</h3>
+          <p>Input dan kelola nilai siswa per mata pelajaran dengan sistem filter berdasarkan kelas, semester, dan tahun ajaran.</p>
+          
+          <div class="step-item">
+            <strong>🔍 Filter Data</strong>
+            <p class="mb-2">Pilih <b>Kelas</b>, <b>Semester</b>, dan <b>Tahun Ajaran</b> => Klik tombol "Tampilkan Data". Data siswa dan kolom nilai akan muncul di tabel.</p>
+            <small>💡 Tips: Gunakan tombol "Reset Filter" untuk mengosongkan pilihan filter</small>
+          </div>
+
+          <div class="step-item">
+            <strong>📝 Input Nilai Siswa</strong>
+            <p class="mb-2">Setelah filter diterapkan, tabel akan menampilkan kolom untuk setiap mata pelajaran dan jenis penilaian (misal: Tugas, UTS, UAS). Isi nilai langsung di tabel untuk setiap siswa.</p>
+            <p class="mb-0"><b>Simpan:</b> Klik tombol "Simpan Semua Nilai" di bawah tabel untuk menyimpan semua nilai sekaligus.</p>
+            <small>⚠️ Note: Di kelas 6 semester 2 akan muncul satu nilai lagi bernama <b>Ujian Sekolah</b>.</small>
+          </div>
+
+          <div class="step-item">
+            <strong>📋 Riwayat Penilaian</strong>
+            <p class="mb-1">Tabel riwayat menampilkan semua nilai yang telah diinput, meliputi: Nama Siswa • Kelas • Semester • Tahun Ajaran • Mata Pelajaran • Jenis Penilaian • Nilai</p>
+            <p class="mb-0"><b>Hapus:</b> Gunakan tombol di kolom Aksi untuk menghapus nilai yang sudah tersimpan.</p>
+            <p class="mb-0"><b>Edit/Update:</b> Input nilai baru di tabel input nilai untuk meng-update/memperbaharui data nilai per-siswa.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>⚠️ Catatan Penting</strong>
+            <p class="mb-0">Pastikan semua filter telah dipilih sebelum input nilai • Nilai yang valid adalah 0-100 • Simpan perubahan sebelum berpindah halaman</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN ABSENSI ========== -->
+        <section class="panduan-section">
+          <h3>🕒 Absensi</h3>
+          <p>Catat dan kelola kehadiran siswa dengan sistem perhitungan nilai kehadiran otomatis.</p>
+          
+          <div class="step-item">
+            <strong>🔍 Filter Data</strong>
+            <p class="mb-2">Pilih <b>Kelas</b>, <b>Semester</b>, dan <b>Tahun Ajaran</b> => Klik tombol "Tampilkan Data". Daftar siswa akan muncul untuk input kehadiran.</p>
+            <small>💡 Tips: Gunakan tombol "Reset Filter" untuk mengosongkan pilihan filter</small>
+          </div>
+
+          <div class="step-item">
+            <strong>📝 Input Kehadiran</strong>
+            <p class="mb-2">Isi jumlah kehadiran untuk setiap siswa pada kolom:</p>
+            <ul class="mb-2">
+              <li><b>Hadir (H)</b> - Kehadiran normal</li>
+              <li><b>Sakit (S)</b> - Tidak hadir karena sakit</li>
+              <li><b>Izin (I)</b> - Tidak hadir dengan izin</li>
+              <li><b>Alpa (A)</b> - Tidak hadir tanpa keterangan</li>
+            </ul>
+            <p class="mb-0">Kolom <b>Total</b> dan <b>Nilai</b> akan dihitung otomatis. Klik "Simpan Semua Kehadiran" untuk menyimpan.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>📊 Kehadiran Tersimpan</strong>
+            <p class="mb-1">Tabel riwayat menampilkan semua data kehadiran yang telah disimpan, meliputi rekap H, S, I, A, Total, dan Nilai akhir kehadiran.</p>
+            <p class="mb-0"><b>Hapus:</b> Gunakan tombol di kolom Aksi untuk menghapus data kehadiran yang sudah tersimpan.</p>
+            <p class="mb-0"><b>Edit/Update:</b> Input kehadiran baru di tabel input kehadiran untuk meng-update/memperbaharui data kehadiran per-siswa.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>⚠️ Catatan Penting</strong>
+            <p class="mb-0">Nilai kehadiran dihitung otomatis dari jumlah hadir • Pastikan data diisi dengan benar sebelum menyimpan • Data dapat diperbarui dengan input ulang</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN REKAP NILAI ========== -->
+        <section class="panduan-section">
+          <h3>🧾 Rekap Nilai</h3>
+          <p>Lihat rekapitulasi lengkap nilai siswa per mata pelajaran dengan perhitungan otomatis dan fitur cetak laporan.</p>
+          
+          <div class="step-item">
+            <strong>🔍 Filter Data</strong>
+            <p class="mb-2">Pilih <b>Kelas</b>, <b>Semester</b>, dan <b>Tahun Ajaran</b> untuk menampilkan rekap nilai. Data akan ditampilkan dalam tabel lengkap.</p>
+            <small>💡 Tips: Filter diisi otomatis oleh sistem saat halaman dimuat</small>
+          </div>
+
+          <div class="step-item">
+            <strong>📊 Tabel Rekap Nilai</strong>
+            <p class="mb-2">Tabel menampilkan informasi lengkap per siswa:</p>
+            <ul class="mb-0">
+              <li><b>Data Siswa:</b> No, NIS, NISN, Nama, Kelas</li>
+              <li><b>Nilai per Mapel:</b> Rata-rata nilai dari semua jenis penilaian</li>
+              <li><b>Nilai Kehadiran:</b> Nilai absensi siswa</li>
+              <li><b>Summary:</b> Rata-rata keseluruhan dan status kelulusan</li>
+            </ul>
+          </div>
+
+          <div class="step-item">
+            <strong>📈 Panel Statistik</strong>
+            <p class="mb-0">Di atas tabel terdapat panel statistik yang menampilkan ringkasan data seperti: Total Siswa • Rata-rata Nilai Kelas • Siswa Lulus • Siswa Tidak Lulus</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🖨️ Cetak Laporan</strong>
+            <p class="mb-2">Tersedia tombol untuk mencetak rekap nilai dalam format:</p>
+            <p class="mb-0"><b>Excel:</b> Untuk pengolahan data lebih lanjut</p>
+          </div>
+
+          <div class="step-item">
+            <strong>📐 Perhitungan Nilai</strong>
+            <p class="mb-0">Nilai semester dihitung otomatis dengan bobot: Tugas (25%) + UTS (25%) + UAS (35%) + Kehadiran (15%) = Nilai Akhir</p>
+          </div>
+        </section>
+
+        <!-- ========== HALAMAN LAPORAN KELULUSAN ========== -->
+        <section class="panduan-section">
+          <h3>🎓 Laporan Kelulusan</h3>
+          <p>Laporan kelulusan siswa kelas 6 berdasarkan akumulasi nilai 6 semester (Kelas 4-6) dan Ujian Sekolah.</p>
+          
+          <div class="step-item">
+            <strong>📊 Panel Statistik Kelulusan</strong>
+            <p class="mb-0">Menampilkan 4 kotak informasi: Total Siswa Kelas 6 • Siswa Lulus • Tidak Lulus • Persentase Kelulusan. Data otomatis terupdate.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🏆 Ranking Kelulusan</strong>
+            <p class="mb-2">Tabel ranking menampilkan peringkat siswa berdasarkan nilai akhir kelulusan, meliputi: Rank • NIS • NISN • Nama Siswa • Kelas • Nilai Akhir • Status Kelulusan</p>
+            <p class="mb-0"><b>Status:</b> Badge hijau untuk "LULUS" dan badge merah untuk "TIDAK LULUS"</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🔍 Detail Siswa</strong>
+            <p class="mb-0">Klik tombol "Detail" di kolom Aksi untuk melihat rincian lengkap nilai per semester dan ujian sekolah siswa tersebut.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>🔄 Refresh Data</strong>
+            <p class="mb-0">Klik tombol "Refresh" di atas tabel untuk memperbarui data kelulusan terbaru dari database.</p>
+          </div>
+
+          <div class="step-item">
+            <strong>📐 Perhitungan Nilai Kelulusan</strong>
+            <p class="mb-2">Formula nilai akhir kelulusan:</p>
+            <ul class="mb-0">
+              <li><b>Rata-rata Akumulasi 6 Semester (Kelas 4-6):</b> 60%</li>
+              <li><b>Nilai Ujian Sekolah:</b> 40%</li>
+            </ul>
+          </div>
+        </section>
+
+
+
+        <!-- ========== FAQ & TIPS ==========
+        <section class="panduan-section">
+          <h3>💡 Tips & Rekomendasi</h3>
+          
+          <ul class="tips-list">
+            <li>✅ Pastikan setiap siswa memiliki NIS yang unik dan tidak ada duplikasi</li>
+            <li>✅ Simpan nomor kontak orang tua yang aktif dan mudah dihubungi</li>
+            <li>✅ Gunakan format kelas yang konsisten (contoh: 6A, 6B, 6C)</li>
+            <li>✅ Lakukan backup data secara berkala untuk keamanan</li>
+            <li>⚠️ Berhati-hati saat menghapus data siswa karena tidak dapat dikembalikan</li>
+            <li>⚠️ Pastikan nilai yang diinput sudah benar sebelum menyimpan</li>
+          </ul>
+          
+          <h4 class="mt-4 mb-3" style="color: #2c3e50; font-weight: 600;">❓ Pertanyaan yang Sering Diajukan (FAQ)</h4>
+          
+          <div class="faq-item">
+            <strong>Q: Bagaimana jika NIS sudah terdaftar?</strong>
+            <p class="text-muted">A: Gunakan NIS yang berbeda. Sistem tidak mengizinkan NIS duplikat untuk menjaga integritas data.</p>
+          </div>
+          
+          <div class="faq-item">
+            <strong>Q: Apakah NISN wajib diisi?</strong>
+            <p class="text-muted">A: NISN tidak wajib, namun sangat disarankan untuk diisi sebagai identitas nasional siswa.</p>
+          </div>
+          
+          <div class="faq-item">
+            <strong>Q: Bisakah mengubah NIS siswa yang sudah ada?</strong>
+            <p class="text-muted">A: Bisa, tetapi tidak disarankan jika siswa tersebut sudah memiliki nilai terdaftar untuk menghindari inkonsistensi data.</p>
+          </div>
+          
+          <div class="faq-item">
+            <strong>Q: Bagaimana cara menghapus data yang salah?</strong>
+            <p class="text-muted">A: Gunakan tombol edit untuk mengubah data atau tombol hapus untuk menghapus permanen. Pastikan melakukan konfirmasi dengan teliti.</p>
+          </div>
+        </section> -->
+
+
+      </div>
+    </div>
+
+<div class="watermark position-fixed bottom-0 end-0 p-2">
+  <h3 class="text-muted mb-0">App version: 2.2.0</h3>
+</div>
+
+</main>
+
+  <!-- script.js  -->
+   <script src="./js/namaUser.js"></script>
+   <script src="./js/closeWindow.js"></script>
+  <!-- script js cdn bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

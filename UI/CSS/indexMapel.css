@@ -1,0 +1,40 @@
+.btn-cancel {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: #95a5a6;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-top: 10px;
+  transition: var(--transition);
+}
+
+.btn-filter {
+  transition: all 0.2s;
+}
+
+.btn-filter:hover {
+  transform: translateY(-2px); 
+}
+
+.btn-reset {
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  transform: translateY(-2px); 
+}
+
+
+.btn-cancel:hover {
+  background: #7f8c8d;
+}
+
+.note{
+  text-align: center;
+}
+
+.hidden { display: none !important; }
+

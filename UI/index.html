@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./CSS/index.css">
+  <link rel="stylesheet" href="./CSS/icon.css">
+  <link rel="stylesheet" href="./CSS/indexMapel.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./CSS/mainContent.css">k
+  <title>Sistem Penilaian & Rekap Nilai | Dashboard</title>
+</head>
+<body class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a href="pengguna.html" style="text-decoration: none;" title="Lihat Panduan Penggunaan">
+      <div class="sidebar-header d-flex align-items-center gap-2">
+        <img src="./assets/icon.png" 
+            alt="Logo" 
+            class="sidebar-logo">
+        <div class="d-flex flex-column pt-2">
+          <h2 class="sidebar-title mb-0">Dashboard</h2>
+          <p class="mb-0 ms-2" style="font-size: 14px; text-decoration: none; color: white;">Aplikasi Rekap Nilai</p>
+        </div>
+      </div>
+    </a>
+
+    <nav class="nav">
+      <a href="index.html" class="nav-item">
+        <span class="icon">🏠</span>
+        <span class="label">Beranda</span>
+      </a>
+      <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">DATA MASTER</span>
+      <a href="index-dataSiswa.html" class="nav-item">
+        <span class="icon">📁</span>
+        <span class="label">Data Siswa</span>
+      </a>
+      <a href="index-mapel.html" class="nav-item">
+        <span class="icon">📚</span>
+        <span class="label">Mata Pelajaran</span>
+      </a>
+      <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">PENILAIAN</span>
+      <a href="index-penilaian.html" class="nav-item">
+        <span class="icon">📊</span>
+        <span class="label">Penilaian</span>
+      </a>
+      <a href="index-absensi.html" class="nav-item">
+        <span class="icon">🕒</span>
+        <span class="label">Absensi</span>
+      </a>
+            <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">CETAK LAPORAN</span>
+      <a href="index-rekapNilai.html" class="nav-item">
+        <span class="icon">🧾</span>
+        <span class="label">Rekap Nilai</span>
+      </a>
+      <a href="index-kelulusan.html" class="nav-item">
+        <span class="icon bi bi-mortarboard-fill"></span>
+        <span class="label ms-2">Laporan Kelulusan</span>
+      </a>
+    </nav>
+        
+    <div class="sidebar-footer">
+      <button id="logoutBtn" title="Tutup Aplikasi">Keluar</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header title="Klik untuk ganti nama mu">
+      <h1 id="guruHeader" style="cursor:pointer;">Selamat datang, Guru 👋</h1>
+      <p>Berikut adalah ringkasan data sistem penilaian</p>
+    </header>
+
+    <!-- Modal Edit Nama Guru -->
+        <div id="modal">
+          <div id="modalContent">
+            <label for="guruInput">Nama Guru:</label>
+            <input type="text" id="guruInput" placeholder="Masukkan nama guru">
+            <div class="button-group">
+              <button id="cancelBtn">❌ Batal</button>
+              <button id="saveBtn">💾 Simpan</button>
+            </div>
+          </div>
+        </div>
+
+    <!-- Filter Container (Will be inserted here by JS) -->
+    <!-- Statistics Boxes -->
+    <div class="stats-container">
+      <div class="stat-box">
+        <div class="icon-large">🧑🏻‍🎓</div>
+        <h3>Total Siswa</h3>
+        <div class="value">0</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="icon-large">📚</div>
+        <h3>Mata Pelajaran</h3>
+        <div class="value">0</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="icon-large">📝</div>
+        <h3>Total Penilaian</h3>
+        <div class="value" id="total-penilaian">0</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="icon-large">📈</div>
+        <h3>Rata-rata Nilai</h3>
+        <div class="value" id="rata-rata-nilai">0</div>
+      </div>
+    </div>
+
+    <!-- Filter Info Alert (Will be inserted here by JS) -->
+
+    <!-- Ranking Table -->
+    <div class="table-container">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">
+          <i class="bi bi-trophy-fill text-warning"></i> 
+          Ranking Siswa Terbaik
+        </h2>
+        <button id="btnRefresh" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th width="100">Rank</th>
+              <th width="120">NIS</th>
+              <th width="150">NISN</th>
+              <th width="150">Nama Siswa</th>
+              <th width="100">Kelas</th>
+              <th width="150">Rata-rata</th>
+              <th width="150">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-tbody">
+            <!-- Data will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center">
+      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 fw-semibold text-primary">Memuat data...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+  
+<!-- Scripts -->
+<!-- ⚠️ LOAD TAURI BRIDGE DULU, LALU SCRIPT LAIN -->
+<script src="./js/tauri-bridge.js"></script>
+<script>
+  // Wait for bridge to be ready before loading other scripts
+  window.addEventListener('electronAPIReady', () => {
+    console.log('🎯 electronAPI ready, loading other scripts...');
+  });
+</script>
+<script src="./js/closeWindow.js"></script>
+<script src="./js/index.js"></script>
+<script src="./js/namaUser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

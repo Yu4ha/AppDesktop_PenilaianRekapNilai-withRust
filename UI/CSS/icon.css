@@ -1,0 +1,15 @@
+.sidebar-logo {
+  width: 26%;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+  display: flex;
+  margin-left: 8px;
+  align-items: center;
+}

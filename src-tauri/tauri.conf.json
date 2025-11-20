@@ -1,0 +1,39 @@
+{
+  "package": {
+    "productName": "App Sistem Penilaian Rekap Nilai",
+    "version": "2.2.0"
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "withGlobalTauri": true, 
+    "beforeBuildCommand": "",
+    "devPath": "../UI",
+    "distDir": "../UI"
+  },
+  "tauri": {
+    "windows": [
+      {
+        "title": "Sistem Penilaian Rekap Nilai",
+        "width": 1200,
+        "height": 800,
+        "resizable": true
+      }
+    ],
+    "bundle": {
+      "identifier": "com.darma.penilaian",
+      "active": true
+    },
+    "allowlist": {
+      "all": false,
+      "fs": { "all": true },
+      "dialog": { "all": true },
+      "path": { "all": true },
+      "shell": { "all": true },
+      "http": { "all": true },
+      "process": { "all": true }
+    },
+    "security": {
+      "csp": null
+    }
+  }
+}

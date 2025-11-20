@@ -1,0 +1,165 @@
+   /* Style tambahan untuk merapikan tampilan */
+    .panduan-section {
+      background: #ffffff;
+      border-radius: 15px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid #e4dd00;
+      border-right: 4px solid #e4dd00;
+    }
+
+    .panduan-section h3 {
+      color: #2c3e50;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e8f4f8;
+    }
+
+    .panduan-section p {
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .feature-box {
+      /* background: linear-gradient(135deg, #66a1ea 0%, #4ba271 100%); */
+      background-color: white;
+      color: rgb(0, 0, 0);
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      line-height: 1.6;
+      border-left: 3px solid #000000;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .feature-box:hover {
+      transform: translateX(5px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    .navigation-menu {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+    }
+
+    .menu-item-guide {
+      background: white;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      border-radius: 8px;
+      border-left: 3px solid #000000;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .menu-item-guide:hover {
+      transform: translateX(5px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    .menu-item-guide strong {
+      color: #2c3e50;
+      font-size: 1.05rem;
+    }
+
+    .step-item {
+      background: #f8f9fa;
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border-left: 3px solid #30d857;
+    }
+
+    .step-item strong {
+      color: #2c3e50;
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-item p {
+      margin-bottom: 0.5rem;
+      color: #666;
+    }
+
+    .step-item small {
+      display: block;
+      margin-top: 0.5rem;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .section-divider {
+      margin: 1.5rem 0;
+      padding-left: 1rem;
+      font-weight: 600;
+      color: #6c757d;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    .faq-item {
+      background: white;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      border-left: 3px solid #ffc107;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .faq-item strong {
+      color: #2c3e50;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .faq-item .text-muted {
+      color: #666 !important;
+      margin-bottom: 0;
+    }
+
+    .tips-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 1rem;
+    }
+
+    .tips-list li {
+      background: white;
+      padding: 0.875rem 1.25rem;
+      margin-bottom: 0.75rem;
+      border-radius: 8px;
+      border-left: 3px solid #17a2b8;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      line-height: 1.6;
+      color: #555;
+    }
+
+    .info-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-top: 0.5rem;
+    }
+
+
+    .table-container h2 {
+      color: #2c3e50;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 3px solid #000000;
+    }
