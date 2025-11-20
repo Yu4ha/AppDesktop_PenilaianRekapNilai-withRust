@@ -4,11 +4,12 @@
     "version": "2.2.0"
   },
   "build": {
-    "beforeDevCommand": "",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+
     "withGlobalTauri": true, 
-    "beforeBuildCommand": "",
-    "devPath": "../UI",
-    "distDir": "../UI"
+     "devPath": "http://127.0.0.1:5173",
+    "distDir": "../UI/dist" 
   },
   "tauri": {
     "windows": [
