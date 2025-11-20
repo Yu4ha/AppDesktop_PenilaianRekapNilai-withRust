@@ -13,37 +13,7 @@
  */
 
 // Import Tauri API
-import { invoke } from '@tauri-apps/api/tauri';
-
-/* ============================
-   Tauri API Helper
-   ============================ */
-
-/**
- * Wrapper untuk invoke dengan error handling
- * @param {string} command - Nama Tauri command
- * @param {object} params - Parameters untuk command
- * @returns {Promise<any>} - Data dari response
- * @throws {Error} - Jika terjadi error
- */
-async function invokeCommand(command, params = {}) {
-  try {
-    const response = await invoke(command, params);
-    
-    // Handle ApiResponse format
-    if (response && typeof response === 'object') {
-      if (response.success === false) {
-        throw new Error(response.error || 'Unknown error');
-      }
-      return response.data;
-    }
-    
-    return response;
-  } catch (error) {
-    console.error(`Error invoking ${command}:`, error);
-    throw error;
-  }
-}
+import { invokeCommand } from './tauriAPIhelper';
 
 /* ============================
    State

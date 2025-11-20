@@ -61,3 +61,9 @@ ppDesktop_PenilaianRekapNilai-withRust/
         ├── penilaian.js
         └── rekapNilai.js
         
+
+==============================================================
+HOW TO RUN THIS APP
+==============================================================
+
+You just type this "npm run tauri dev" in konsole/terminal/cmd or anything konsole what you have.

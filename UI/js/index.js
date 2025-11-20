@@ -16,24 +16,19 @@ function getTingkatFromKelas(kelas) {
 // ==========================
 // INIT & LOAD DATA
 // ==========================
-function initDashboard() {
-  if (!window.electronAPI) {
-    console.error('❌ electronAPI belum tersedia, retry in 100ms...');
-    setTimeout(initDashboard, 100);
-    return;
-  }
 
-  console.log('✅ electronAPI ready, initializing dashboard...');
-  
+function initDashboard() {
+  console.log('✅ Tauri environment ready, initializing dashboard...');
+
   // Init modal listeners dulu
   initModalListeners();
-  
+
   (async () => {
     try {
       await initFilterControls();
       await loadDashboardData();
       showPanduanPenggunaNotification();
-      setTimeout(() => {showEditNamaGuruNotification();}, 3000);
+      setTimeout(() => { showEditNamaGuruNotification(); }, 3000);
       initIPCListeners();
     } catch (err) {
       console.error('Gagal inisialisasi dashboard:', err);
@@ -42,39 +37,30 @@ function initDashboard() {
   })();
 }
 
-// Start initialization when bridge is ready
-if (window.electronAPI) {
+document.addEventListener("DOMContentLoaded", () => {
   initDashboard();
-} else {
-  window.addEventListener('electronAPIReady', initDashboard);
-  // Fallback jika event tidak fire
-  setTimeout(() => {
-    if (!window.electronAPI) {
-      console.error('❌ electronAPI timeout, forcing init...');
-      initDashboard();
-    }
-  }, 2000);
-}
+
+  // Load nama guru
+  const savedNamaGuru = localStorage.getItem('namaGuru');
+  const guruHeader = document.getElementById('guruHeader');
+  if (savedNamaGuru && guruHeader) {
+    guruHeader.textContent = `Selamat datang, ${savedNamaGuru} 👋`;
+  }
+});
 
 /* ============================
    🆕 Nama Guru Edit Notification
    ============================ */
 
-/**
- * Tampilkan notifikasi untuk edit nama guru
- * Muncul setiap kali halaman di-load, maksimal 2x per hari
- */
 function showEditNamaGuruNotification() {
-  // Ambil data dari localStorage
   const data = localStorage.getItem('editNamaGuruNotificationData');
   const today = new Date().toDateString();
-  
+
   let notificationData = {
     date: today,
     count: 0
   };
 
-  // Parse data yang ada
   if (data) {
     try {
       notificationData = JSON.parse(data);
@@ -83,20 +69,14 @@ function showEditNamaGuruNotification() {
     }
   }
 
-  // Reset counter jika hari berbeda
   if (notificationData.date !== today) {
-    notificationData = {
-      date: today,
-      count: 0
-    };
+    notificationData = { date: today, count: 0 };
   }
 
-  // Cek apakah sudah melebihi batas harian (2x per hari)
   if (notificationData.count >= 2) {
-    return; // Sudah muncul 2x hari ini
+    return;
   }
 
-  // Buat notification element
   const notification = document.createElement('div');
   notification.className = 'guru-edit-notification';
   notification.innerHTML = `
@@ -116,23 +96,19 @@ function showEditNamaGuruNotification() {
 
   document.body.appendChild(notification);
 
-  // Increment counter dan simpan
   notificationData.count++;
   localStorage.setItem('editNamaGuruNotificationData', JSON.stringify(notificationData));
 
-  // Event listener untuk tombol close
   document.getElementById('closeGuruNotif').addEventListener('click', () => {
     closeNotification();
   });
 
-  // Auto close setelah 12 detik
   setTimeout(() => {
     if (document.body.contains(notification)) {
       closeNotification();
     }
   }, 12000);
 
-  // Fungsi untuk menutup notifikasi
   function closeNotification() {
     notification.style.animation = 'fadeOutUp 0.4s ease-out';
     setTimeout(() => {
@@ -144,27 +120,20 @@ function showEditNamaGuruNotification() {
 }
 
 /* ============================
-   🆕 Nama Guru Edit Modal
-   ============================ */
-
-   /* ============================
    🆕 Nama Guru Edit Modal Functions
    ============================ */
 
 function openGuruModal() {
   const modal = document.getElementById('modal');
   const guruInput = document.getElementById('guruInput');
-  
+
   if (modal && guruInput) {
-    // Ambil nama saat ini
     const currentName = localStorage.getItem('namaGuru') || 'Guru';
     guruInput.value = currentName;
-    
-    // Show modal
+
     modal.classList.add('show');
     modal.style.display = 'flex';
-    
-    // Focus input
+
     setTimeout(() => guruInput.focus(), 100);
   }
 }
@@ -181,18 +150,17 @@ function showAlert(message) {
   showNotification('info', message);
 }
 
-// Event listeners untuk modal - WRAP DENGAN SAFETY CHECK
 function initModalListeners() {
   const guruHeader = document.getElementById('guruHeader');
   const cancelBtn = document.getElementById('cancelBtn');
   const saveBtn = document.getElementById('saveBtn');
   const guruInput = document.getElementById('guruInput');
   const modal = document.getElementById('modal');
-  
+
   if (guruHeader) {
     guruHeader.addEventListener('click', openGuruModal);
   }
-  
+
   if (cancelBtn) {
     cancelBtn.addEventListener('click', closeGuruModal);
   }
@@ -200,23 +168,23 @@ function initModalListeners() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       const namaGuru = guruInput?.value.trim();
-      
+
       if (!namaGuru) {
         alert('⚠️ Nama guru tidak boleh kosong!');
         guruInput?.focus();
         return;
       }
-      
+
       try {
         localStorage.setItem('namaGuru', namaGuru);
-        
+
         if (guruHeader) {
           guruHeader.textContent = `Selamat datang, ${namaGuru} 👋`;
         }
-        
+
         closeGuruModal();
         showAlert(`✅ Nama guru berhasil diubah menjadi: ${namaGuru}`);
-        
+
       } catch (error) {
         console.error('Error saving nama guru:', error);
         showAlert('❌ Gagal menyimpan nama guru');
@@ -224,7 +192,6 @@ function initModalListeners() {
     });
   }
 
-  // Close modal saat klik di luar
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target.id === 'modal') {
@@ -233,7 +200,6 @@ function initModalListeners() {
     });
   }
 
-  // Support Enter key
   if (guruInput) {
     guruInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -243,7 +209,6 @@ function initModalListeners() {
   }
 }
 
-// Close modal dengan ESC key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const modal = document.getElementById('modal');
@@ -253,58 +218,29 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Load nama guru saat halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
-  const savedNamaGuru = localStorage.getItem('namaGuru');
-  const guruHeader = document.getElementById('guruHeader');
-  if (savedNamaGuru && guruHeader) {
-    guruHeader.textContent = `Selamat datang, ${savedNamaGuru} 👋`;
-  }
-  
-  initModalListeners();
-});
-
 /* ============================
    🆕 Panduan Pengguna Notification
    ============================ */
 
-/**
- * Tampilkan notifikasi panduan pengguna
- * Muncul setiap kali halaman di-load, maksimal 3x per hari
- */
 function showPanduanPenggunaNotification() {
-  // Ambil data dari localStorage
   const data = localStorage.getItem('panduanNotificationData');
   const today = new Date().toDateString();
-  
-  let notificationData = {
-    date: today,
-    count: 0
-  };
 
-  // Parse data yang ada
+  let notificationData = { date: today, count: 0 };
+
   if (data) {
-    try {
-      notificationData = JSON.parse(data);
-    } catch (e) {
-      console.error('Error parsing notification data:', e);
-    }
+    try { notificationData = JSON.parse(data); }
+    catch (e) { console.error('Error parsing notification data:', e); }
   }
 
-  // Reset counter jika hari berbeda
   if (notificationData.date !== today) {
-    notificationData = {
-      date: today,
-      count: 0
-    };
+    notificationData = { date: today, count: 0 };
   }
 
-  // Cek apakah sudah melebihi batas harian (3x per hari)
   if (notificationData.count >= 2) {
-    return; // Sudah muncul 3x hari ini, jangan tampilkan lagi
+    return;
   }
 
-  // Buat notification element
   const notification = document.createElement('div');
   notification.className = 'panduan-notification';
   notification.innerHTML = `
@@ -325,28 +261,23 @@ function showPanduanPenggunaNotification() {
 
   document.body.appendChild(notification);
 
-  // Increment counter dan simpan
   notificationData.count++;
   localStorage.setItem('panduanNotificationData', JSON.stringify(notificationData));
 
-  // Event listener untuk tombol close
   document.getElementById('closePanduanNotif').addEventListener('click', () => {
     closeNotification();
   });
 
-  // Event listener untuk tombol buka panduan
   document.getElementById('gotoPanduan').addEventListener('click', () => {
     window.location.href = 'pengguna.html';
   });
 
-  // Auto close setelah 15 detik
   setTimeout(() => {
     if (document.body.contains(notification)) {
       closeNotification();
     }
   }, 15000);
 
-  // Fungsi untuk menutup notifikasi
   function closeNotification() {
     notification.style.animation = 'slideOutRight 0.3s ease-out';
     setTimeout(() => {
@@ -356,7 +287,6 @@ function showPanduanPenggunaNotification() {
     }, 300);
   }
 
-  // Tambahkan animasi slide out
   if (!document.querySelector('#slideOutRightKeyframes')) {
     const style = document.createElement('style');
     style.id = 'slideOutRightKeyframes';

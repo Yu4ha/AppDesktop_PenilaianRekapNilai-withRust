@@ -10,32 +10,10 @@
 
 /* ====== Tauri API Helper ====== */
 
-/**
- * Wrapper untuk invoke dengan error handling
- * @param {string} command - Nama Tauri command
- * @param {object} params - Parameters untuk command
- * @returns {Promise<any>} - Data dari response
- * @throws {Error} - Jika terjadi error
- */
-async function invokeCommand(command, params = {}) {
-  try {
-    const response = await window.__TAURI__.invoke(command, params);
-    
-    // Handle ApiResponse format dari Rust
-    if (response && typeof response === 'object') {
-      if (response.success === false) {
-        throw new Error(response.error || 'Unknown error');
-      }
-      // Return data field dari ApiResponse
-      return response.data !== undefined ? response.data : response;
-    }
-    
-    return response;
-  } catch (error) {
-    console.error(`Error invoking ${command}:`, error);
-    throw error;
-  }
-}
+
+// Import fungsi helper dari file tauriApiHelper.js
+import { invokeCommand } from './tauriAPIhelper';
+
 
 /* ====== Elemen DOM ====== */
 const siswaTableBody = document.getElementById("siswaTableBody");

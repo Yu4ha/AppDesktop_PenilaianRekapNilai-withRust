@@ -6,6 +6,7 @@
  * ✅ Multi-tugas popup feature
  * ✅ Batch save & delete
  */
+import { invokeCommand } from './tauriAPIhelper';
 
 /* ============================
    State
@@ -30,27 +31,6 @@ let currentPopupData = {
 const MAX_INPUT_LENGTH = 7;
 const VALID_NILAI_MIN = 0;
 const VALID_NILAI_MAX = 100;
-
-/* ============================
-   Tauri API Helper
-   ============================ */
-async function invokeCommand(command, params = {}) {
-  try {
-    const response = await window.__TAURI__.invoke(command, params);
-    
-    if (response && typeof response === 'object') {
-      if (response.success === false) {
-        throw new Error(response.error || 'Unknown error');
-      }
-      return response.data !== undefined ? response.data : response;
-    }
-    
-    return response;
-  } catch (error) {
-    console.error(`Error invoking ${command}:`, error);
-    throw error;
-  }
-}
 
 /* ============================
    DOM Lifecycle

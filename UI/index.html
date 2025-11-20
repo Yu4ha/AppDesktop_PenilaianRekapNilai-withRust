@@ -160,17 +160,10 @@
   <div class="toast-container" id="toastContainer"></div>
   
 <!-- Scripts -->
-<!-- ⚠️ LOAD TAURI BRIDGE DULU, LALU SCRIPT LAIN -->
-<script src="./js/tauri-bridge.js"></script>
-<script>
-  // Wait for bridge to be ready before loading other scripts
-  window.addEventListener('electronAPIReady', () => {
-    console.log('🎯 electronAPI ready, loading other scripts...');
-  });
-</script>
-<script src="./js/closeWindow.js"></script>
-<script src="./js/index.js"></script>
-<script src="./js/namaUser.js"></script>
+
+<script type="module" src="./js/closeWindow.js"></script>
+<script type="module" src="./js/index.js"></script>
+<script type="module" src="./js/namaUser.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

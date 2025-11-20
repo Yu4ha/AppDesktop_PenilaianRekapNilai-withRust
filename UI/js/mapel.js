@@ -1,8 +1,7 @@
 /**
  * mapel.js (Tauri Version - FIXED FINAL)
  */
-
-import { invoke } from '@tauri-apps/api/tauri';
+import { invokeCommand } from './tauriAPIhelper';
 
 // ==========================
 // State
@@ -19,22 +18,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   await loadMapelData();
 });
-
-// ==========================
-// Helper
-// ==========================
-async function invokeCommand(command, params = {}) {
-  try {
-    const res = await invoke(command, params);
-    if (res && typeof res === 'object' && res.success === false) {
-      throw new Error(res.error || 'Unknown error');
-    }
-    return res.data ?? res;
-  } catch (err) {
-    console.error(`Error calling ${command}:`, err);
-    throw err;
-  }
-}
 
 function escapeHtml(str) {
   return String(str)
