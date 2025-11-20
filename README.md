@@ -28,3 +28,36 @@ src-tauri/
     └── logic/
         ├── mod.rs          ⭐ Module export
         └── penilaian.rs    ⭐ Business logic (ranking, kelulusan)
+
+Folder root projek
+
+ppDesktop_PenilaianRekapNilai-withRust/
+├── build/
+├── node_modules/
+├── package.json
+├── package-lock.json
+├── README.md
+├── src-tauri/
+└── UI/
+    ├── assets/
+    ├── CSS/
+    ├── index.html
+    ├── index-absensi.html
+    ├── index-dataSiswa.html
+    ├── index-kelulusan.html
+    ├── index-mapel.html
+    ├── index-penilaian.html
+    ├── index-rekapNilai.html
+    ├── pengguna.html
+    └── js/
+        ├── absensi.js
+        ├── closeWindow.js
+        ├── dataSiswa.js
+        ├── index.js
+        ├── kelulusan.js
+        ├── mapel.js
+        ├── mapelUI.js
+        ├── namaUser.js
+        ├── penilaian.js
+        └── rekapNilai.js
+        
