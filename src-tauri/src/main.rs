@@ -39,14 +39,23 @@ fn main() {
             commands::nilai::get_nilai_by_id,
             commands::nilai::get_nilai_by_siswa,
             commands::nilai::get_nilai_siswa_by_mapel,
+            
+            // === KEHADIRAN COMMANDS ===
             commands::nilai::save_kehadiran,
             commands::nilai::get_kehadiran,
+            commands::nilai::update_kehadiran,              // ✅ TAMBAH
             commands::nilai::delete_kehadiran,
+            commands::nilai::get_kehadiran_by_kelas,        // ✅ TAMBAH
+            commands::nilai::get_all_kehadiran,             // ✅ TAMBAH
+            
+            // === PERHITUNGAN NILAI COMMANDS ===
             commands::nilai::hitung_komponen_nilai_semester,
             commands::nilai::hitung_akumulasi_nilai,
             commands::nilai::hitung_nilai_akhir_kelulusan,
             commands::nilai::cek_kenaikan_kelas,
             commands::nilai::cek_kelulusan,
+            
+            // === CONFIG COMMANDS ===
             commands::nilai::get_active_jenis_nilai,
             commands::nilai::get_bobot_jenis_nilai,
             commands::nilai::get_predikat_config,

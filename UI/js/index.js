@@ -1,3 +1,28 @@
+// Import Tauri API
+import { invoke } from '@tauri-apps/api/tauri';
+
+// ==========================
+// Helper: Invoke Command with Error Handling
+// ==========================
+async function invokeCommand(cmd, args = {}) {
+  try {
+    const result = await invoke(cmd, args);
+    
+    // Unwrap ApiResponse if needed
+    if (result && typeof result === 'object' && 'success' in result) {
+      if (!result.success) {
+        throw new Error(result.error || 'Command failed');
+      }
+      return result.data;
+    }
+    
+    return result;
+  } catch (err) {
+    console.error(`[Tauri Command Error] ${cmd}:`, err);
+    throw err;
+  }
+}
+
 // ==========================
 // STATE & FILTER
 // ==========================
@@ -29,7 +54,7 @@ function initDashboard() {
       await loadDashboardData();
       showPanduanPenggunaNotification();
       setTimeout(() => { showEditNamaGuruNotification(); }, 3000);
-      initIPCListeners();
+      // ✅ REMOVED: initIPCListeners() - Tauri tidak pakai IPC events
     } catch (err) {
       console.error('Gagal inisialisasi dashboard:', err);
       showNotification('error', `Gagal inisialisasi: ${err.message}`);
@@ -311,11 +336,11 @@ function showPanduanPenggunaNotification() {
 // ==========================
 async function initFilterControls() {
   try {
-    // Get tahun ajaran aktif & daftar kelas dari database
+    // ✅ FIXED: Tauri commands
     const [tahunAjaranAktif, daftarTahunAjaran, allSiswa] = await Promise.all([
-      window.electronAPI.getTahunAjaranAktif(),
-      window.electronAPI.getDaftarTahunAjaran(),
-      window.electronAPI.getAllSiswa()
+      invokeCommand('get_tahun_ajaran_aktif'),
+      invokeCommand('get_daftar_tahun_ajaran'),
+      invokeCommand('get_all_siswa')
     ]);
     
     currentFilter.tahun_ajaran = tahunAjaranAktif;
@@ -459,31 +484,40 @@ async function applyFilter() {
 // ==========================
 async function loadDashboardData() {
   try {
-    // Buat filter options sesuai signature penilaianLogic
+
     const filterOptions = {
       kelas: currentFilter.kelas,
       semester: currentFilter.semester,
-      tahun_ajaran: currentFilter.tahun_ajaran
+      tahunAjaran: currentFilter.tahun_ajaran 
     };
 
     console.log('Loading dashboard dengan filter:', filterOptions);
 
-    // Ambil data DARI penilaianLogic (bukan data mentah)
     const [
-      totalSiswa,      // Total semua siswa (tidak terpengaruh filter)
-      allMapel,        // Semua mapel
-      allNilai,        // Total nilai (untuk debug)
-      topSiswa,        // Top siswa menggunakan getTopSiswa() dari penilaianLogic
-      statsGlobal      // Statistik menggunakan hitungStatistik() dari penilaianLogic
+      totalSiswa,
+      allMapel,
+      allNilai,
+      topSiswa,
+      statsGlobal
     ] = await Promise.all([
-      window.electronAPI.getTotalSiswa(),
-      window.electronAPI.getAllMapel(),
-      window.electronAPI.getAllNilai(),
-      window.electronAPI.getTopSiswa({ 
-        limit: 10, 
-        ...filterOptions 
+      invokeCommand('get_total_siswa'),
+      invokeCommand('get_all_mapel'),
+      invokeCommand('get_all_nilai'),
+      invokeCommand('get_top_siswa', { 
+        req: {  
+          kelas: currentFilter.kelas,
+          semester: currentFilter.semester,
+          tahun_ajaran: currentFilter.tahun_ajaran,  
+          limit: 10
+        }
       }),
-      window.electronAPI.getStatistikGlobal(filterOptions)
+      invokeCommand('hitung_statistik', { 
+        req: {  
+          kelas: currentFilter.kelas,
+          semester: currentFilter.semester,
+          tahun_ajaran: currentFilter.tahun_ajaran  
+        }
+      })
     ]);
 
     console.log('Data loaded:', {
@@ -493,17 +527,6 @@ async function loadDashboardData() {
       topSiswa,
       statsGlobal
     });
-
-    // Cek jika ada error dari API
-    if (topSiswa?.error) {
-      console.error('Error dari getTopSiswa:', topSiswa.error);
-      // Jangan throw, biarkan render empty state
-    }
-    
-    if (statsGlobal?.error) {
-      console.error('Error dari getStatistikGlobal:', statsGlobal.error);
-      // Jangan throw, biarkan render dengan data default
-    }
 
     const statsBox = document.querySelector('.stats-container');
     const tableBody = document.querySelector('.table tbody');
@@ -794,57 +817,17 @@ if (btnRefresh) {
 }
 
 // ==========================
-// ✅ IPC EVENT LISTENERS (CROSS-WINDOW)
+// ✅ REMOVED: IPC Event Listeners (Tauri doesn't use IPC)
 // ==========================
-
-/**
- * Init IPC Listeners untuk komunikasi antar window
- */
-function initIPCListeners() {
-  // ✅ Listen reload request dari halaman lain (via IPC)
-  if (window.electronAPI.onDashboardReloadRequested) {
-    window.electronAPI.onDashboardReloadRequested(async (data) => {
-      console.log('🔄 Dashboard reload requested via IPC:', data);
-      
-      try {
-        const { kelas, semester, tahun_ajaran, success, timestamp } = data;
-        
-        // Cek apakah filter saat ini match dengan data yang diupdate
-        const isFilterMatch = (
-          (!currentFilter.kelas || currentFilter.kelas === kelas) &&
-          currentFilter.semester === semester &&
-          currentFilter.tahun_ajaran === tahun_ajaran
-        );
-        
-        if (isFilterMatch) {
-          console.log('✅ Filter match, reloading dashboard...');
-          await loadDashboardData();
-          showNotification('success', `Nilai berhasil diperbarui (${success} siswa)`);
-        } else {
-          console.log('ℹ️ Filter tidak match, showing notification only');
-          showNotification('info', `Kehadiran disimpan untuk Kelas ${kelas} Semester ${semester}`);
-        }
-        
-      } catch (err) {
-        console.error('❌ Gagal reload dashboard:', err);
-        showNotification('error', 'Gagal refresh data setelah update kehadiran');
-      }
-    });
-    
-    console.log('✅ IPC listener "dashboard-reload-requested" registered');
-  } else {
-    console.warn('⚠️ IPC onDashboardReloadRequested tidak tersedia');
-    console.warn('⚠️ Pastikan preload.js sudah di-update dengan API IPC');
-  }
-}
+// Tauri menggunakan single window model, tidak perlu cross-window IPC
+// Jika butuh komunikasi antar halaman, gunakan localStorage atau Tauri events
 
 // ==========================
-// FALLBACK: Window Event Listeners (jika dalam 1 halaman)
+// Window Event Listeners (untuk same-page updates)
 // ==========================
 
-// Listen untuk update dari halaman kehadiran (fallback jika same-window)
 window.addEventListener('kehadiran-updated', async (e) => {
-  console.log('🔄 Kehadiran updated (window event):', e.detail);
+  console.log('🔄 Kehadiran updated:', e.detail);
   
   try {
     const { kelas, semester, tahun_ajaran, success } = e.detail;
@@ -870,9 +853,8 @@ window.addEventListener('kehadiran-updated', async (e) => {
   }
 });
 
-// Listen untuk update dari halaman nilai (fallback)
 window.addEventListener('nilai-updated', async (e) => {
-  console.log('🔄 Nilai updated (window event):', e.detail);
+  console.log('🔄 Nilai updated:', e.detail);
   
   try {
     await loadDashboardData();
@@ -882,7 +864,7 @@ window.addEventListener('nilai-updated', async (e) => {
   }
 });
 
-console.log('✅ Event listeners registered (window events as fallback)');
+console.log('✅ Event listeners registered');
 
 // ==========================
 // EXPORT (if needed)

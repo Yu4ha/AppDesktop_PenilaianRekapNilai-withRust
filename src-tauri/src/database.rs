@@ -314,6 +314,98 @@ fn check_and_migrate_nilai_table(conn: &Connection) -> SqlResult<bool> {
     Ok(false)
 }
 
+/// Migrasi tabel nilai - Ubah mapel_id menjadi nullable untuk kehadiran
+fn check_and_migrate_nilai_mapel_nullable(conn: &Connection) -> SqlResult<bool> {
+    info!("🔍 Mengecek kebutuhan migrasi mapel_id nullable...");
+
+    // Cek apakah ada data kehadiran dengan mapel_id tidak NULL
+    let count_kehadiran_with_mapel: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM nilai WHERE jenis = 'Kehadiran' AND mapel_id IS NOT NULL",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    if count_kehadiran_with_mapel > 0 {
+        info!("🔄 Ditemukan {} data kehadiran dengan mapel_id, memulai migrasi...", count_kehadiran_with_mapel);
+
+        // Backup tabel
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS nilai_backup_mapel AS SELECT * FROM nilai",
+            [],
+        )?;
+
+        // Buat tabel baru dengan mapel_id nullable
+        conn.execute(
+            "CREATE TABLE nilai_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                siswa_id INTEGER NOT NULL,
+                mapel_id INTEGER,
+                kelas TEXT NOT NULL,
+                semester INTEGER NOT NULL CHECK(semester IN (1, 2)),
+                tahun_ajaran TEXT NOT NULL,
+                jenis TEXT NOT NULL,
+                nilai REAL NOT NULL CHECK(nilai >= 0 AND nilai <= 100),
+                hadir INTEGER DEFAULT 0,
+                sakit INTEGER DEFAULT 0,
+                izin INTEGER DEFAULT 0,
+                alpa INTEGER DEFAULT 0,
+                tanggal_input TEXT DEFAULT (date('now')),
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                updated_at TEXT,
+                FOREIGN KEY (siswa_id) REFERENCES siswa(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (mapel_id) REFERENCES mapel(id) ON DELETE CASCADE ON UPDATE CASCADE
+            )",
+            [],
+        )?;
+
+        // Copy data dengan mapel_id = NULL untuk kehadiran
+        conn.execute(
+            "INSERT INTO nilai_new 
+             SELECT 
+                id, siswa_id, 
+                CASE WHEN jenis = 'Kehadiran' THEN NULL ELSE mapel_id END as mapel_id,
+                kelas, semester, tahun_ajaran, jenis, nilai,
+                hadir, sakit, izin, alpa, tanggal_input,
+                created_at, updated_at
+             FROM nilai",
+            [],
+        )?;
+
+        conn.execute("DROP TABLE nilai", [])?;
+        conn.execute("ALTER TABLE nilai_new RENAME TO nilai", [])?;
+
+        // Recreate indexes
+        conn.execute_batch("
+            CREATE INDEX IF NOT EXISTS idx_nilai_siswa ON nilai(siswa_id);
+            CREATE INDEX IF NOT EXISTS idx_nilai_mapel ON nilai(mapel_id);
+            CREATE INDEX IF NOT EXISTS idx_nilai_jenis ON nilai(jenis);
+            CREATE INDEX IF NOT EXISTS idx_nilai_kelas_semester ON nilai(kelas, semester);
+            CREATE INDEX IF NOT EXISTS idx_nilai_tahun_ajaran ON nilai(tahun_ajaran);
+            CREATE INDEX IF NOT EXISTS idx_nilai_siswa_mapel_semester ON nilai(siswa_id, mapel_id, kelas, semester);
+        ")?;
+
+        info!("✅ Migrasi mapel_id nullable selesai. {} data kehadiran diupdate.", count_kehadiran_with_mapel);
+        return Ok(true);
+    }
+
+    // Cek apakah schema sudah nullable (untuk database baru)
+    let table_info: Vec<(String, String, i32)> = conn
+        .prepare("PRAGMA table_info(nilai)")?
+        .query_map([], |row| Ok((row.get(1)?, row.get(2)?, row.get(3)?)))?
+        .collect::<SqlResult<Vec<_>>>()?;
+
+    if let Some((_, _, notnull)) = table_info.iter().find(|(name, _, _)| name == "mapel_id") {
+        if *notnull == 1 {
+            // mapel_id masih NOT NULL, tapi tidak ada data kehadiran
+            info!("⚠️ mapel_id masih NOT NULL, tapi belum ada data kehadiran. Migrasi akan dilakukan saat ada data.");
+        } else {
+            info!("✅ mapel_id sudah nullable");
+        }
+    }
+
+    Ok(false)
+}
+
 // ==========================
 // INIT DATABASE
 // ==========================
@@ -398,12 +490,12 @@ pub fn init_database(db_file_override: Option<PathBuf>) -> SqlResult<()> {
             updated_at TEXT
         )
     ";
-
+    
     let create_nilai_table = "
         CREATE TABLE IF NOT EXISTS nilai (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             siswa_id INTEGER NOT NULL,
-            mapel_id INTEGER NOT NULL,
+            mapel_id INTEGER,
             kelas TEXT NOT NULL,
             semester INTEGER NOT NULL CHECK(semester IN (1, 2)),
             tahun_ajaran TEXT NOT NULL,
@@ -509,6 +601,7 @@ pub fn init_database(db_file_override: Option<PathBuf>) -> SqlResult<()> {
     check_and_migrate_siswa_table(&conn)?;
     check_and_migrate_nilai_table(&conn)?;
     check_and_migrate_siswa_parent_data(&conn)?;
+    check_and_migrate_nilai_mapel_nullable(&conn)?;
 
     // Log final statistics
     let tables: Vec<String> = conn

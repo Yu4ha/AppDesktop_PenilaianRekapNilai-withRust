@@ -1083,6 +1083,229 @@ pub fn delete_kehadiran(id: i64) -> SqlResult<bool> {
 }
 
 // ==========================
+// KEHADIRAN ADDITIONAL FUNCTIONS
+// ==========================
+
+/// Update kehadiran yang sudah ada
+pub fn update_kehadiran(
+    id: i64,
+    hadir: Option<i32>,
+    sakit: Option<i32>,
+    izin: Option<i32>,
+    alpa: Option<i32>,
+) -> SqlResult<KehadiranData> {
+    let db = database::get_db();
+    let db_lock = db.lock().unwrap();
+    
+    if let Some(ref conn) = *db_lock {
+        // Get data kehadiran yang ada
+        let existing: (i32, i32, i32, i32) = conn.query_row(
+            "SELECT hadir, sakit, izin, alpa FROM nilai 
+             WHERE id = ?1 AND mapel_id IS NULL AND jenis = 'Kehadiran'",
+            params![id],
+            |row| Ok((
+                row.get(0).unwrap_or(0),
+                row.get(1).unwrap_or(0),
+                row.get(2).unwrap_or(0),
+                row.get(3).unwrap_or(0),
+            )),
+        )?;
+
+        // Update dengan nilai baru atau gunakan yang lama
+        let new_hadir = hadir.unwrap_or(existing.0);
+        let new_sakit = sakit.unwrap_or(existing.1);
+        let new_izin = izin.unwrap_or(existing.2);
+        let new_alpa = alpa.unwrap_or(existing.3);
+
+        // Validasi
+        if new_hadir < 0 || new_sakit < 0 || new_izin < 0 || new_alpa < 0 {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Nilai kehadiran tidak boleh negatif".to_string()
+            ));
+        }
+
+        let total_pertemuan = new_hadir + new_sakit + new_izin + new_alpa;
+        if total_pertemuan == 0 {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Total pertemuan tidak boleh 0".to_string()
+            ));
+        }
+
+        // Hitung ulang nilai kehadiran
+        let nilai_kehadiran = ((new_hadir as f64 / total_pertemuan as f64) * 10000.0).round() / 100.0;
+
+        // Update database
+        conn.execute(
+            "UPDATE nilai 
+             SET nilai = ?1, hadir = ?2, sakit = ?3, izin = ?4, alpa = ?5,
+                 updated_at = datetime('now','localtime')
+             WHERE id = ?6",
+            params![nilai_kehadiran, new_hadir, new_sakit, new_izin, new_alpa, id],
+        )?;
+
+        info!("Update kehadiran berhasil: id={}, nilai={}", id, nilai_kehadiran);
+
+        Ok(KehadiranData {
+            id: Some(id),
+            nilai: nilai_kehadiran,
+            breakdown: KehadiranBreakdown {
+                hadir: new_hadir,
+                sakit: new_sakit,
+                izin: new_izin,
+                alpa: new_alpa,
+                total: total_pertemuan,
+            },
+        })
+    } else {
+        Err(rusqlite::Error::InvalidQuery)
+    }
+}
+
+/// Struct untuk kehadiran dengan detail siswa
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KehadiranWithSiswa {
+    pub id: i64,
+    pub siswa_id: i64,
+    pub nama_siswa: String,
+    pub nis: String,
+    pub nisn: String, 
+    pub kelas: String,
+    pub semester: i32,
+    pub tahun_ajaran: String,
+    pub nilai: f64,
+    pub hadir: i32,
+    pub sakit: i32,
+    pub izin: i32,
+    pub alpa: i32,
+    pub total: i32,
+}
+
+/// Get kehadiran by kelas dan semester
+pub fn get_kehadiran_by_kelas(
+    kelas: &str,
+    semester: i32,
+    tahun_ajaran: &str,
+) -> SqlResult<Vec<KehadiranWithSiswa>> {
+    validate_kelas_and_semester(kelas, semester)
+        .map_err(|e| rusqlite::Error::InvalidParameterName(e))?;
+
+    let db = database::get_db();
+    let db_lock = db.lock().unwrap();
+    
+    if let Some(ref conn) = *db_lock {
+        let mut stmt = conn.prepare(
+            "SELECT n.id, n.siswa_id, s.nama, s.nis, s.nisn, n.kelas, n.semester, 
+                    n.tahun_ajaran, n.nilai, n.hadir, n.sakit, n.izin, n.alpa
+             FROM nilai n
+             JOIN siswa s ON s.id = n.siswa_id
+             WHERE n.mapel_id IS NULL AND n.jenis = 'Kehadiran'
+               AND n.kelas = ?1 AND n.semester = ?2 AND n.tahun_ajaran = ?3
+             ORDER BY s.nama ASC"
+        )?;
+
+        let rows = stmt.query_map(
+            params![kelas, semester, tahun_ajaran],
+            |row| {
+            let hadir: i32 = row.get(9).unwrap_or(0);   
+            let sakit: i32 = row.get(10).unwrap_or(0);
+            let izin: i32 = row.get(11).unwrap_or(0);
+            let alpa: i32 = row.get(12).unwrap_or(0);
+
+                Ok(KehadiranWithSiswa {
+                    id: row.get(0)?,
+                    siswa_id: row.get(1)?,
+                    nama_siswa: row.get(2)?,
+                    nis: row.get(3)?,
+                    nisn: row.get(4)?,
+                    kelas: row.get(5)?,
+                    semester: row.get(6)?,
+                    tahun_ajaran: row.get(7)?,
+                    nilai: row.get(8)?,
+                    hadir,
+                    sakit,
+                    izin,
+                    alpa,
+                    total: hadir + sakit + izin + alpa,
+                })
+            },
+        )?;
+
+        let results: SqlResult<Vec<_>> = rows.collect();
+        info!("Get kehadiran by kelas: kelas={}, semester={}, count={}", 
+              kelas, semester, results.as_ref().map(|r| r.len()).unwrap_or(0));
+        results
+    } else {
+        Err(rusqlite::Error::InvalidQuery)
+    }
+}
+
+/// Get semua kehadiran dengan optional filter
+pub fn get_all_kehadiran(
+    semester: Option<i32>,
+    tahun_ajaran: Option<&str>,
+) -> SqlResult<Vec<KehadiranWithSiswa>> {
+    let db = database::get_db();
+    let db_lock = db.lock().unwrap();
+    
+    if let Some(ref conn) = *db_lock {
+        let mut query = "SELECT n.id, n.siswa_id, s.nama, s.nis, s.nisn, n.kelas, n.semester, 
+                                n.tahun_ajaran, n.nilai, n.hadir, n.sakit, n.izin, n.alpa
+                         FROM nilai n
+                         JOIN siswa s ON s.id = n.siswa_id
+                         WHERE n.mapel_id IS NULL AND n.jenis = 'Kehadiran'".to_string();
+        
+        let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        if let Some(sem) = semester {
+            query.push_str(" AND n.semester = ?");
+            params_vec.push(Box::new(sem));
+        }
+
+        if let Some(ta) = tahun_ajaran {
+            query.push_str(" AND n.tahun_ajaran = ?");
+            params_vec.push(Box::new(ta.to_string()));
+        }
+
+        query.push_str(" ORDER BY n.tahun_ajaran DESC, n.kelas ASC, n.semester ASC, s.nama ASC");
+
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter()
+            .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
+            .collect();
+
+        let mut stmt = conn.prepare(&query)?;
+        let rows = stmt.query_map(params_refs.as_slice(), |row| {
+            let hadir: i32 = row.get(9).unwrap_or(0);
+            let sakit: i32 = row.get(10).unwrap_or(0);
+            let izin: i32 = row.get(11).unwrap_or(0);
+            let alpa: i32 = row.get(12).unwrap_or(0);
+
+            Ok(KehadiranWithSiswa {
+                id: row.get(0)?,
+                siswa_id: row.get(1)?,
+                nama_siswa: row.get(2)?,
+                nis: row.get(3)?,
+                nisn: row.get(4)?, 
+                kelas: row.get(5)?,
+                semester: row.get(6)?,
+                tahun_ajaran: row.get(7)?,
+                nilai: row.get(8)?,
+                hadir,
+                sakit,
+                izin,
+                alpa,
+                total: hadir + sakit + izin + alpa,
+            })
+        })?;
+
+        let results: SqlResult<Vec<_>> = rows.collect();
+        info!("Get all kehadiran: count={}", results.as_ref().map(|r| r.len()).unwrap_or(0));
+        results
+    } else {
+        Err(rusqlite::Error::InvalidQuery)
+    }
+}
+
+// ==========================
 // STATUS FUNCTIONS
 // ==========================
 

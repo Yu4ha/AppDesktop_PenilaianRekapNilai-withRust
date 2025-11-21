@@ -1,19 +1,40 @@
 /**
- * kehadiran.js (v3 - Tauri Migration)
+ * absensi.js (v4 - Tauri Backend Fixed)
  * ==========================================
  * Logic untuk input dan manajemen kehadiran siswa
  * Kehadiran per siswa, per semester (tidak per mapel)
  * 
- * UPDATE v3:
- * - Migrasi dari Electron ke Tauri
- * - Debounce input events (fix freeze issue)
- * - DOM caching untuk performance
- * - Optimized calculations
+ * UPDATE v4:
+ * - Sinkronisasi dengan backend Rust baru
+ * - Command: get_kehadiran_by_kelas, save_kehadiran, delete_kehadiran
+ * - Response struct: KehadiranWithSiswa
  * ==========================================
  */
 
 // Import Tauri API
-import { invokeCommand } from './tauriAPIhelper';
+import { invoke } from '@tauri-apps/api/tauri';
+
+/* ============================
+   Helper: Invoke Command
+   ============================ */
+async function invokeCommand(cmd, args = {}) {
+  try {
+    const result = await invoke(cmd, args);
+    
+    // Unwrap ApiResponse if needed
+    if (result && typeof result === 'object' && 'success' in result) {
+      if (!result.success) {
+        throw new Error(result.error || 'Command failed');
+      }
+      return result.data;
+    }
+    
+    return result;
+  } catch (err) {
+    console.error(`[Tauri Command Error] ${cmd}:`, err);
+    throw err;
+  }
+}
 
 /* ============================
    State
@@ -41,6 +62,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAlert('Gagal memuat halaman. Cek konsol untuk detail.');
   }
 });
+
+/* ============================
+   Load Data Functions
+   ============================ */
+async function initializePage() {
+  showLoading(true);
+  try {
+    await loadInitialData();
+    renderFilterSection();
+    
+    const params = new URLSearchParams(window.location.search);
+    const urlKelas = params.get('kelas');
+    const urlSemester = params.get('semester');
+    const urlTahun = params.get('tahun');
+
+    if (urlKelas && urlSemester && urlTahun) {
+      filterKelas = urlKelas;
+      filterSemester = parseInt(urlSemester);
+      filterTahunAjaran = urlTahun;
+      
+      document.getElementById('filterKelas').value = filterKelas;
+      document.getElementById('filterSemester').value = filterSemester;
+      document.getElementById('filterTahunAjaran').value = filterTahunAjaran;
+      
+      await applyFilters();
+    } else {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+      filterTahunAjaran = currentMonth >= 7 
+        ? `${currentYear}/${currentYear + 1}` 
+        : `${currentYear - 1}/${currentYear}`;
+      filterSemester = currentMonth >= 7 ? 1 : 2;
+      
+      document.getElementById('filterTahunAjaran').value = filterTahunAjaran;
+      document.getElementById('filterSemester').value = filterSemester;
+    }
+  } catch (err) {
+    console.error('Error initializing page:', err);
+    showAlert('Gagal memuat data: ' + extractErrorMessage(err));
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function loadInitialData() {
+  try {
+    // ✅ Tauri Commands
+    const [siswaData, tahunAjaranData] = await Promise.all([
+      invokeCommand('get_all_siswa'),
+      invokeCommand('get_daftar_tahun_ajaran')
+    ]);
+
+    allSiswa = Array.isArray(siswaData) ? siswaData : [];
+    availableTahunAjaran = Array.isArray(tahunAjaranData) ? tahunAjaranData : [];
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentTahunAjaran = currentMonth >= 7 
+      ? `${currentYear}/${currentYear + 1}` 
+      : `${currentYear - 1}/${currentYear}`;
+    
+    if (!availableTahunAjaran.includes(currentTahunAjaran)) {
+      availableTahunAjaran.unshift(currentTahunAjaran);
+    }
+  } catch (err) {
+    console.error('loadInitialData error:', err);
+    throw err;
+  }
+}
+
+async function loadFilteredKehadiran() {
+  try {
+    if (!filterKelas || !filterSemester || !filterTahunAjaran) {
+      allKehadiran = [];
+      return;
+    }
+
+    // ✅ NEW: get_kehadiran_by_kelas
+    const kehadiranData = await invokeCommand('get_kehadiran_by_kelas', {
+      kelas: filterKelas,
+      semester: filterSemester,
+      tahunAjaran: filterTahunAjaran
+    });
+    
+    allKehadiran = Array.isArray(kehadiranData) ? kehadiranData : [];
+
+    console.log('Loaded kehadiran:', allKehadiran);
+  } catch (err) {
+    console.error('loadFilteredKehadiran error:', err);
+    allKehadiran = [];
+  }
+}
+
 
 /* ============================
    CSS Styles
@@ -226,100 +342,6 @@ style.textContent = `
 document.head.appendChild(style);
 
 /* ============================
-   Load Data Functions
-   ============================ */
-async function initializePage() {
-  showLoading(true);
-  try {
-    await loadInitialData();
-    renderFilterSection();
-    
-    const params = new URLSearchParams(window.location.search);
-    const urlKelas = params.get('kelas');
-    const urlSemester = params.get('semester');
-    const urlTahun = params.get('tahun');
-
-    if (urlKelas && urlSemester && urlTahun) {
-      filterKelas = urlKelas;
-      filterSemester = parseInt(urlSemester);
-      filterTahunAjaran = urlTahun;
-      
-      document.getElementById('filterKelas').value = filterKelas;
-      document.getElementById('filterSemester').value = filterSemester;
-      document.getElementById('filterTahunAjaran').value = filterTahunAjaran;
-      
-      await applyFilters();
-    } else {
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-      filterTahunAjaran = currentMonth >= 7 
-        ? `${currentYear}/${currentYear + 1}` 
-        : `${currentYear - 1}/${currentYear}`;
-      filterSemester = currentMonth >= 7 ? 1 : 2;
-      
-      document.getElementById('filterTahunAjaran').value = filterTahunAjaran;
-      document.getElementById('filterSemester').value = filterSemester;
-    }
-  } catch (err) {
-    console.error('Error initializing page:', err);
-    showAlert('Gagal memuat data: ' + extractErrorMessage(err));
-  } finally {
-    showLoading(false);
-  }
-}
-
-async function loadInitialData() {
-  try {
-    // ✅ Tauri Commands
-    const [siswaData, tahunAjaranData] = await Promise.all([
-      invokeCommand('get_all_siswa'),
-      invokeCommand('get_daftar_tahun_ajaran')
-    ]);
-
-    allSiswa = Array.isArray(siswaData) ? siswaData : [];
-    availableTahunAjaran = Array.isArray(tahunAjaranData) ? tahunAjaranData : [];
-    
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentTahunAjaran = currentMonth >= 7 
-      ? `${currentYear}/${currentYear + 1}` 
-      : `${currentYear - 1}/${currentYear}`;
-    
-    if (!availableTahunAjaran.includes(currentTahunAjaran)) {
-      availableTahunAjaran.unshift(currentTahunAjaran);
-    }
-  } catch (err) {
-    console.error('loadInitialData error:', err);
-    throw err;
-  }
-}
-
-async function loadFilteredKehadiran() {
-  try {
-    if (!filterKelas || !filterSemester || !filterTahunAjaran) {
-      allKehadiran = [];
-      return;
-    }
-
-    // ✅ Tauri Command: get_all_kehadiran_by_semester
-    const kehadiranData = await invokeCommand('get_all_kehadiran_by_semester', {
-      kelas: filterKelas,
-      semester: filterSemester,
-      tahunAjaran: filterTahunAjaran
-    });
-    
-    allKehadiran = Array.isArray(kehadiranData) ? kehadiranData : [];
-
-    console.log('Loaded kehadiran:', allKehadiran);
-  } catch (err) {
-    console.error('loadFilteredKehadiran error:', err);
-    allKehadiran = [];
-  }
-}
-
-/* ============================
    Render Functions
    ============================ */
 function renderFilterSection() {
@@ -431,18 +453,21 @@ function renderKehadiranTable() {
   }
 
   filteredSiswa.forEach((siswa, idx) => {
+    // ✅ Check if kehadiran exists for this siswa
+    const existingKehadiran = allKehadiran.find(k => k.siswa_id === siswa.id);
+    
     const tr = document.createElement('tr');
     
     tr.innerHTML = `
       <td>${idx + 1}</td>
       <td>${siswa.nis}</td>
       <td>${siswa.nisn || '-'}</td>
-      <td style="text-align: center; padding-left: 10px;">${escapeHtml(siswa.nama)}</td>
+      <td style="text-align: left; padding-left: 10px;">${escapeHtml(siswa.nama)}</td>
       <td>
         <input 
           type="number" 
           class="kehadiran-input hadir" 
-          value="" 
+          value="${existingKehadiran ? existingKehadiran.hadir : ''}" 
           min="0" 
           placeholder="0"
           data-siswa-id="${siswa.id}"
@@ -453,7 +478,7 @@ function renderKehadiranTable() {
         <input 
           type="number" 
           class="kehadiran-input sakit" 
-          value="" 
+          value="${existingKehadiran ? existingKehadiran.sakit : ''}" 
           min="0" 
           placeholder="0"
           data-siswa-id="${siswa.id}"
@@ -464,7 +489,7 @@ function renderKehadiranTable() {
         <input 
           type="number" 
           class="kehadiran-input izin" 
-          value="" 
+          value="${existingKehadiran ? existingKehadiran.izin : ''}" 
           min="0" 
           placeholder="0"
           data-siswa-id="${siswa.id}"
@@ -475,7 +500,7 @@ function renderKehadiranTable() {
         <input 
           type="number" 
           class="kehadiran-input alpa" 
-          value="" 
+          value="${existingKehadiran ? existingKehadiran.alpa : ''}" 
           min="0" 
           placeholder="0"
           data-siswa-id="${siswa.id}"
@@ -483,10 +508,10 @@ function renderKehadiranTable() {
         />
       </td>
       <td>
-        <span class="total-display" data-siswa-id="${siswa.id}">-</span>
+        <span class="total-display" data-siswa-id="${siswa.id}">${existingKehadiran ? existingKehadiran.total : '-'}</span>
       </td>
       <td>
-        <span class="nilai-display" data-siswa-id="${siswa.id}">-</span>
+        <span class="nilai-display" data-siswa-id="${siswa.id}">${existingKehadiran ? existingKehadiran.nilai : '-'}</span>
       </td>
     `;
     
@@ -523,25 +548,20 @@ function renderRiwayatTable() {
   allKehadiran.forEach((item, idx) => {
     const tr = document.createElement('tr');
 
-    const total = (Number(item.hadir) || 0) + 
-                  (Number(item.sakit) || 0) + 
-                  (Number(item.izin) || 0) + 
-                  (Number(item.alpa) || 0);
-
     tr.innerHTML = `
       <td>${idx + 1}</td>
       <td>${item.nis}</td>
       <td>${item.nisn || '-'}</td>
-      <td style="text-align: center; padding-left: 10px;">${escapeHtml(item.nama_siswa)}</td>
+      <td style="text-align: left; padding-left: 10px;">${escapeHtml(item.nama_siswa)}</td>
 
       <td style="background: #4caf50; color: white; text-align: center;">${item.hadir ?? 0}</td>
       <td style="background: #ff9800; color: white; text-align: center;">${item.sakit ?? 0}</td>
       <td style="background: #2196f3; color: white; text-align: center;">${item.izin ?? 0}</td>
       <td style="background: #f44336; color: white; text-align: center;">${item.alpa ?? 0}</td>
 
-      <td style="background: #9e9e9e; color: white; text-align: center;">${total}</td>
+      <td style="background: #9e9e9e; color: white; text-align: center;">${item.total ?? 0}</td>
       <td style="background: #673ab7; color: white; text-align: center;">
-        <span class="nilai-display">${item.nilai ?? 0}</span>
+        <span class="nilai-display">${typeof item.nilai === 'number' ? item.nilai.toFixed(2) : '-'}</span>
       </td>
 
       <td>
@@ -723,11 +743,14 @@ async function handleSaveKehadiran(event) {
     if (total === 0) continue;
 
     payload.push({
-      siswa_id: siswaId,
+      siswaId,
       kelas: filterKelas,
       semester: filterSemester,
-      tahun_ajaran: filterTahunAjaran,
-      ...breakdown
+      tahunAjaran: filterTahunAjaran,
+      hadir: breakdown.hadir,
+      sakit: breakdown.sakit,
+      izin: breakdown.izin,
+      alpa: breakdown.alpa
     });
   }
 
@@ -747,16 +770,40 @@ async function handleSaveKehadiran(event) {
   }
 
   try {
-    // ✅ Tauri Command: batch_save_kehadiran
-    const result = await invokeCommand('batch_save_kehadiran', {
-      input: { data_list: payload }
-    });
+    let successCount = 0;
+    let failedCount = 0;
+    const errors = [];
+
+    // ✅ Loop save_kehadiran individual
+    for (const data of payload) {
+      try {
+        await invokeCommand('save_kehadiran', {
+          req: {
+            siswa_id: data.siswaId,
+            kelas: data.kelas,
+            semester: data.semester,
+            tahun_ajaran: data.tahunAjaran,
+            hadir: data.hadir,
+            sakit: data.sakit,
+            izin: data.izin,
+            alpa: data.alpa
+          }
+        });
+        successCount++;
+      } catch (err) {
+        failedCount++;
+        errors.push({
+          siswa_id: data.siswaId,
+          error: extractErrorMessage(err)
+        });
+      }
+    }
     
-    if (result.failed === 0) {
-      showAlert(`✅ Berhasil menyimpan ${result.success} data kehadiran!`);
+    if (failedCount === 0) {
+      showAlert(`✅ Berhasil menyimpan ${successCount} data kehadiran!`);
     } else {
-      showAlert(`⚠️ Berhasil: ${result.success}, Gagal: ${result.failed}`);
-      console.error('Batch save errors:', JSON.stringify(result.errors, null, 2));
+      showAlert(`⚠️ Berhasil: ${successCount}, Gagal: ${failedCount}`);
+      console.error('Save errors:', errors);
     }
 
     await loadFilteredKehadiran();
@@ -792,16 +839,12 @@ function attachDeleteHandlers() {
 
       try {
         // ✅ Tauri Command: delete_kehadiran
-        const result = await invokeCommand('delete_kehadiran', { id });
+        await invokeCommand('delete_kehadiran', { id });
         
-        if (result) {
-          showAlert(`✅ Data kehadiran ${nama} berhasil dihapus.`);
-          await loadFilteredKehadiran();
-          renderKehadiranTable();
-          renderRiwayatTable();
-        } else {
-          throw new Error('Gagal menghapus data kehadiran');
-        }
+        showAlert(`✅ Data kehadiran ${nama} berhasil dihapus.`);
+        await loadFilteredKehadiran();
+        renderKehadiranTable();
+        renderRiwayatTable();
       } catch (err) {
         console.error('Delete error:', err);
         showAlert('❌ Gagal menghapus: ' + extractErrorMessage(err));
@@ -827,13 +870,7 @@ function setupEventListeners() {
 
 async function onLogout() {
   if (!confirm('📝 Apakah kamu yakin ingin keluar dari aplikasi?')) return;
-  try {
-    // ✅ Tauri Command: logout (jika ada)
-    // await invokeCommand('logout');
-    window.location.href = 'login.html';
-  } catch {
-    window.location.href = 'login.html';
-  }
+  window.location.href = 'index.html';
 }
 
 /* ============================
@@ -847,7 +884,7 @@ function setupNavigation() {
     const href = link.getAttribute("href");
     if (!href) return;
     
-    if (currentPage === href || (currentPage === "" && href === "kehadiran.html")) {
+    if (currentPage === href || (currentPage === "" && href === "index-absensi.html")) {
       link.classList.add("active");
     }
     
@@ -889,35 +926,21 @@ function showLoading(show) {
   const riwayatTbody = document.getElementById('riwayatTableBody');
   
   if (show) {
-    if (tbody) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="10" style="text-align:center; padding:30px;">
-            <div class="d-flex justify-content-center">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
+    const loadingHtml = `
+      <tr>
+        <td colspan="10" style="text-align:center; padding:30px;">
+          <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="text-muted mt-3">Pastikan anda sudah atur filter Kelas dan Semester lebih dulu...</p>
-          </td>
-        </tr>
-      `;
-    }
-
-    if (riwayatTbody) {
-      riwayatTbody.innerHTML = `
-        <tr>
-          <td colspan="11" style="text-align:center; padding:30px;">
-            <div class="d-flex justify-content-center">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
-            </div>
-             <p class="text-muted mt-3">Pastikan anda sudah atur filter Kelas dan Semester lebih dulu...</p>
-          </td>
-        </tr>
-      `;
-    }
+          </div>
+          <p class="text-muted mt-3">Memuat data...</p>
+        </td>
+      </tr>
+    `;
+    
+    if (tbody) tbody.innerHTML = loadingHtml;
+    if (riwayatTbody) riwayatTbody.innerHTML = loadingHtml.replace('colspan="10"', 'colspan="11"');
   }
 }
 
