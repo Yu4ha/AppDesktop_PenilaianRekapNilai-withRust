@@ -12,14 +12,28 @@
  */
 
 // ==========================
+// TAURI API WRAPPER
+// ==========================
+const TauriAPI = {
+  async invoke(command, payload = {}) {
+    try {
+      return await window.__TAURI__.invoke(command, payload);
+    } catch (err) {
+      console.error(`Tauri command failed: ${command}`, err);
+      throw err;
+    }
+  }
+};
+
+// ==========================
 // STATE & FILTER
 // ==========================
 let currentFilter = {
-  kelas: null,           // null = semua kelas 6, atau "6A", "6B", dst
-  tahun_ajaran: null     // tahun ajaran (auto dari backend)
+  kelas: null,
+  tahun_ajaran: null
 };
 
-let allLaporanKelulusan = []; // Cache data kelulusan
+let allLaporanKelulusan = [];
 
 // ==========================
 // INIT & LOAD DATA
@@ -93,17 +107,22 @@ style.textContent = `
   }
  `;
 
+document.head.appendChild(style);
+
 // ==========================
 // INIT FILTER CONTROLS
 // ==========================
 async function initFilterControls() {
   try {
     // Get tahun ajaran aktif & daftar tahun ajaran
-    const [tahunAjaranAktif, daftarTahunAjaran, allSiswa] = await Promise.all([
-      window.electronAPI.invoke('nilai:getTahunAjaranAktif'),
-      window.electronAPI.invoke('nilai:getDaftarTahunAjaran'),
-      window.electronAPI.invoke('siswa:getAll')
-    ]);
+    const tahunAjaranResponse = await TauriAPI.invoke('get_tahun_ajaran_aktif');
+    const tahunAjaranAktif = tahunAjaranResponse.data || tahunAjaranResponse;
+    
+    const daftarResponse = await TauriAPI.invoke('get_daftar_tahun_ajaran');
+    const daftarTahunAjaran = daftarResponse.data || daftarResponse;
+    
+    const siswaResponse = await TauriAPI.invoke('get_all_siswa');
+    const allSiswa = siswaResponse.data || siswaResponse;
 
     currentFilter.tahun_ajaran = tahunAjaranAktif;
 
@@ -185,7 +204,7 @@ async function initFilterControls() {
 
   } catch (err) {
     console.error('Gagal init filter controls:', err);
-    showNotification('error', 'Gagal inisialisasi filter');
+    showNotification('error', 'Gagal inisialisasi filter: ' + err.message);
   }
 }
 
@@ -197,22 +216,18 @@ async function applyFilter() {
     const filterKelas = document.getElementById('filterKelas');
     const filterTahunAjaran = document.getElementById('filterTahunAjaran');
 
-    // Update current filter
     currentFilter.kelas = filterKelas.value || null;
     currentFilter.tahun_ajaran = filterTahunAjaran.value;
 
     console.log('Applying filter:', currentFilter);
 
-    // Show loading
     const btnApply = document.getElementById('btnApplyFilter');
     const originalText = btnApply.innerHTML;
     btnApply.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memuat...';
     btnApply.disabled = true;
 
-    // Reload data
     await loadLaporanKelulusan();
 
-    // Restore button
     btnApply.innerHTML = originalText;
     btnApply.disabled = false;
 
@@ -220,7 +235,7 @@ async function applyFilter() {
 
   } catch (err) {
     console.error('Gagal apply filter:', err);
-    showNotification('error', 'Gagal menerapkan filter');
+    showNotification('error', 'Gagal menerapkan filter: ' + err.message);
     
     const btnApply = document.getElementById('btnApplyFilter');
     if (btnApply) {
@@ -237,17 +252,18 @@ async function loadLaporanKelulusan() {
   try {
     console.log('Loading laporan kelulusan...');
 
-    // Call backend untuk statistik kelulusan
-    const statistikKelulusan = await window.electronAPI.getStatistikKelulusan();
+    // Call backend dengan Tauri API
+    const statistikKelulusan = await TauriAPI.invoke('hitung_statistik_kelulusan');
 
     console.log('Statistik kelulusan loaded:', statistikKelulusan);
 
-    if (!statistikKelulusan || statistikKelulusan.error) {
-      throw new Error(statistikKelulusan?.error || 'Gagal memuat data kelulusan');
+    if (!statistikKelulusan) {
+      throw new Error('Gagal memuat data kelulusan dari backend');
     }
 
-    // Cache data
-    allLaporanKelulusan = statistikKelulusan.detail || [];
+    // Extract data dari response (Tauri mengembalikan {success: true, data: {...}})
+    const data = statistikKelulusan.data || statistikKelulusan;
+    allLaporanKelulusan = data.detail || [];
 
     // Filter berdasarkan kelas (jika ada)
     let filteredData = allLaporanKelulusan;
@@ -255,11 +271,11 @@ async function loadLaporanKelulusan() {
       filteredData = allLaporanKelulusan.filter(s => s.kelas === currentFilter.kelas);
     }
 
-    // Sort by nilai akhir tertinggi (untuk ranking)
+    // Sort by nilai akhir tertinggi
     filteredData.sort((a, b) => {
       const nilaiA = getNilaiAkhirRataRata(a);
       const nilaiB = getNilaiAkhirRataRata(b);
-      return nilaiB - nilaiA; // descending
+      return nilaiB - nilaiA;
     });
 
     // Add ranking
@@ -268,7 +284,7 @@ async function loadLaporanKelulusan() {
     });
 
     // Update UI
-    updateStatsBoxes(statistikKelulusan, filteredData);
+    updateStatsBoxes(data, filteredData);
     updateFilterInfo(filteredData);
     renderTabelKelulusan(filteredData);
 
@@ -278,7 +294,6 @@ async function loadLaporanKelulusan() {
     console.error('Gagal load laporan kelulusan:', err);
     showNotification('error', 'Gagal memuat data kelulusan: ' + err.message);
     
-    // Render empty state
     const tableBody = document.querySelector('.table tbody');
     if (tableBody) {
       tableBody.innerHTML = `
@@ -316,34 +331,17 @@ function updateStatsBoxes(statistikKelulusan, filteredData) {
   const statsBox = document.querySelector('.stats-container');
   if (!statsBox) return;
 
-  // Hitung statistik dari filteredData
   const totalSiswa = filteredData.length;
   const siswaLulus = filteredData.filter(s => s.status_kelulusan === 'LULUS').length;
   const siswaTidakLulus = totalSiswa - siswaLulus;
   const persenLulus = totalSiswa > 0 ? ((siswaLulus / totalSiswa) * 100).toFixed(2) : 0;
 
-  // Update each stat box
   const statBoxes = statsBox.querySelectorAll('.stat-box');
   
-  // Box 1: Total Siswa Kelas 6
-  if (statBoxes[0]) {
-    statBoxes[0].querySelector('.value').textContent = totalSiswa;
-  }
-
-  // Box 2: Siswa Lulus
-  if (statBoxes[1]) {
-    statBoxes[1].querySelector('.value').textContent = siswaLulus;
-  }
-
-  // Box 3: Siswa Tidak Lulus
-  if (statBoxes[2]) {
-    statBoxes[2].querySelector('.value').textContent = siswaTidakLulus;
-  }
-
-  // Box 4: Persentase Kelulusan
-  if (statBoxes[3]) {
-    statBoxes[3].querySelector('.value').textContent = persenLulus + '%';
-  }
+  if (statBoxes[0]) statBoxes[0].querySelector('.value').textContent = totalSiswa;
+  if (statBoxes[1]) statBoxes[1].querySelector('.value').textContent = siswaLulus;
+  if (statBoxes[2]) statBoxes[2].querySelector('.value').textContent = siswaTidakLulus;
+  if (statBoxes[3]) statBoxes[3].querySelector('.value').textContent = persenLulus + '%';
 }
 
 // ==========================
@@ -412,17 +410,14 @@ function renderTabelKelulusan(data) {
   }
 
   tableBody.innerHTML = data.map((siswa, index) => {
-    // Hitung nilai akhir rata-rata dari semua mapel
     const nilaiAkhir = getNilaiAkhirRataRata(siswa);
     
-    // Tentukan predikat berdasarkan nilai akhir
     let predikat = 'E';
     if (nilaiAkhir >= 90) predikat = 'A';
     else if (nilaiAkhir >= 76) predikat = 'B';
     else if (nilaiAkhir >= 70) predikat = 'C';
     else if (nilaiAkhir >= 50) predikat = 'D';
 
-    // ✅ FIXED: Ranking badge class (sesuai CSS baru)
     const rankingNumber = siswa.ranking || (index + 1);
     const getRankingBadgeClass = (rank) => {
       if (rank === 1) return 'ranking-gold';
@@ -433,12 +428,10 @@ function renderTabelKelulusan(data) {
     const rankingClass = getRankingBadgeClass(rankingNumber);
     const rankingEmoji = rankingNumber === 1 ? '🥇' : rankingNumber === 2 ? '🥈' : rankingNumber === 3 ? '🥉' : '';
 
-    // Badge nilai akhir
     let nilaiBadgeClass = 'nilai-rendah';
     if (nilaiAkhir >= 90) nilaiBadgeClass = 'nilai-tinggi';
     else if (nilaiAkhir >= 75) nilaiBadgeClass = 'nilai-sedang';
 
-    // Status kelulusan
     const statusMap = {
       'LULUS': { class: 'bg-success', icon: '✓', text: 'LULUS' },
       'TIDAK LULUS': { class: 'bg-danger', icon: '✗', text: 'TIDAK LULUS' }
@@ -449,11 +442,6 @@ function renderTabelKelulusan(data) {
       icon: '-', 
       text: siswa.status_kelulusan || 'Belum Ada Data' 
     };
-
-    // Info detail per mapel (untuk tooltip atau expand)
-    const detailMapel = siswa.hasil_per_mapel?.map(m => 
-      `${m.nama_mapel}: ${m.nilai_akhir?.toFixed(2) || '-'} (${m.predikat || '-'})`
-    ).join('<br>') || 'Tidak ada data';
 
     return `
       <tr>
@@ -499,31 +487,32 @@ function renderTabelKelulusan(data) {
 // ==========================
 window.showDetailKelulusan = async function(siswa_id) {
   try {
-    // ✅ Call backend untuk detail kelulusan (menggunakan API yang sudah ada di preload line 103)
-    const detailKelulusan = await window.electronAPI.getLaporanKelulusan(siswa_id);
+    // Call backend dengan Tauri API
+    const detailKelulusan = await TauriAPI.invoke('get_rekap_kelulusan', { siswa_id });
     
-    if (!detailKelulusan || detailKelulusan.error) {
+    if (!detailKelulusan) {
       showNotification('error', 'Gagal memuat detail kelulusan');
       return;
     }
+
+    // Extract dari response Tauri {success: true, data: {...}}
+    const detail = detailKelulusan.data || detailKelulusan;
+    const siswa = detail.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
     
-    // Gunakan data dari backend (lebih lengkap)
-    const siswa = detailKelulusan.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
     if (!siswa) {
       showNotification('error', 'Data siswa tidak ditemukan');
       return;
     }
-    
-    // Override dengan data detail dari backend jika ada
-    if (detailKelulusan.detail_per_mapel) {
-      siswa.hasil_per_mapel = detailKelulusan.detail_per_mapel;
+
+    // Override dengan data detail dari backend
+    if (detail.nilai_per_mapel) {
+      siswa.hasil_per_mapel = detail.nilai_per_mapel;
     }
-    if (detailKelulusan.status) {
-      siswa.statistik = detailKelulusan.status.statistik;
-      siswa.status_kelulusan = detailKelulusan.status.kelulusan;
+    if (detail.status) {
+      siswa.statistik = detail.status.statistik;
+      siswa.status_kelulusan = detail.status.kelulusan;
     }
 
-    // Build detail message
     let detailHTML = `
       <div class="modal fade" id="detailModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -603,38 +592,25 @@ window.showDetailKelulusan = async function(siswa_id) {
       </div>
     `;
 
-    // Remove existing modal if any
     const existingModal = document.getElementById('detailModal');
     if (existingModal) existingModal.remove();
 
-    // Append new modal
     document.body.insertAdjacentHTML('beforeend', detailHTML);
 
-    // Show modal
     const modal = new bootstrap.Modal(document.getElementById('detailModal'));
     modal.show();
 
   } catch (err) {
     console.error('Gagal show detail kelulusan:', err);
-    showNotification('error', 'Gagal menampilkan detail');
+    showNotification('error', 'Gagal menampilkan detail: ' + err.message);
   }
 };
 
-/**
- * printDetailKelulusan
- * ============================================
- * Fungsi untuk mencetak laporan kelulusan siswa
- * dengan format profesional
- * ============================================
- */
-
-/**
- * Print detail kelulusan siswa
- * @param {number} siswa_id - ID siswa yang akan dicetak
- */
+// ==========================
+// PRINT DETAIL KELULUSAN
+// ==========================
 window.printDetailKelulusan = async function(siswa_id) {
   try {
-    // Tampilkan loading
     const printBtn = document.querySelector(`button[onclick="printDetailKelulusan(${siswa_id})"]`);
     if (printBtn) {
       const originalHTML = printBtn.innerHTML;
@@ -642,54 +618,49 @@ window.printDetailKelulusan = async function(siswa_id) {
       printBtn.disabled = true;
     }
 
-    // Ambil data detail kelulusan dari backend
-    const detailKelulusan = await window.electronAPI.getLaporanKelulusan(siswa_id);
+    // Call backend dengan Tauri API
+    const detailKelulusan = await TauriAPI.invoke('get_rekap_kelulusan', { siswa_id });
     
-    if (!detailKelulusan || detailKelulusan.error) {
+    if (!detailKelulusan) {
       throw new Error('Gagal memuat data kelulusan');
     }
 
-    // Ambil data siswa
-    const siswa = detailKelulusan.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
+    const detail = detailKelulusan.data || detailKelulusan;
+    const siswa = detail.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
+    
     if (!siswa) {
       throw new Error('Data siswa tidak ditemukan');
     }
 
-    // Override dengan data detail dari backend
-    if (detailKelulusan.detail_per_mapel) {
-      siswa.hasil_per_mapel = detailKelulusan.detail_per_mapel;
+    if (detail.nilai_per_mapel) {
+      siswa.hasil_per_mapel = detail.nilai_per_mapel;
     }
-    if (detailKelulusan.status) {
-      siswa.statistik = detailKelulusan.status.statistik;
-      siswa.status_kelulusan = detailKelulusan.status.kelulusan;
+    if (detail.status) {
+      siswa.statistik = detail.status.statistik;
+      siswa.status_kelulusan = detail.status.kelulusan;
     }
 
-    // Ambil informasi sekolah (opsional, sesuaikan dengan data Anda)
+    // Sekolah info - TANPA nomor telepon
     const sekolahInfo = {
       nama: 'SD Swasta Plus Insan Mulia',
       alamat: 'Jl. Pasir Randu, Kp. Ceper, Ds. Sukasari, Kec. Serang Baru, Kab. Bekasi',
-      // telp: '(021)-12345678',
-      email: 'mailto:sdplusinsanmulia14@gmail.com'
+      email: 'sdplusinsanmulia14@gmail.com'
     };
 
-    // Hitung nilai akhir rata-rata
     const nilaiAkhirRataRata = getNilaiAkhirRataRata(siswa);
 
-    // Tentukan predikat keseluruhan
     let predikatKeseluruhan = 'E';
     if (nilaiAkhirRataRata >= 90) predikatKeseluruhan = 'A';
     else if (nilaiAkhirRataRata >= 76) predikatKeseluruhan = 'B';
     else if (nilaiAkhirRataRata >= 70) predikatKeseluruhan = 'C';
     else if (nilaiAkhirRataRata >= 50) predikatKeseluruhan = 'D';
 
-    // Tanggal cetak
     const tanggalCetak = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
 
-    // Buat HTML untuk print
     const printHTML = `
       <!DOCTYPE html>
       <html lang="id">
@@ -697,7 +668,7 @@ window.printDetailKelulusan = async function(siswa_id) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Laporan Kelulusan - ${siswa.nama}</title>
-        <style>
+<style>
           * {
             margin: 0;
             padding: 0;
@@ -937,7 +908,7 @@ window.printDetailKelulusan = async function(siswa_id) {
         <div class="header">
           <h1>${sekolahInfo.nama}</h1>
           <div class="subtitle">${sekolahInfo.alamat}</div>
-          <div class="contact">Telp: ${sekolahInfo.telp} | Email: ${sekolahInfo.email}</div>
+          <div class="contact">Email: ${sekolahInfo.email}</div>
         </div>
 
         <!-- Judul Dokumen -->
@@ -1056,32 +1027,26 @@ window.printDetailKelulusan = async function(siswa_id) {
       </html>
     `;
 
-    // Buka window baru untuk print
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       throw new Error('Pop-up diblokir. Harap izinkan pop-up untuk mencetak.');
     }
 
-    // Tulis HTML ke window baru
     printWindow.document.write(printHTML);
     printWindow.document.close();
 
-    // Tunggu hingga selesai loading, lalu print
     printWindow.onload = function() {
       printWindow.focus();
       
-      // Delay singkat agar CSS terapply sempurna
       setTimeout(() => {
         printWindow.print();
         
-        // Auto close setelah print (opsional)
         printWindow.onafterprint = function() {
           printWindow.close();
         };
       }, 250);
     };
 
-    // Restore button state
     if (printBtn) {
       setTimeout(() => {
         printBtn.innerHTML = '<i class="bi bi-printer"></i> Cetak';
@@ -1095,7 +1060,6 @@ window.printDetailKelulusan = async function(siswa_id) {
     console.error('Gagal mencetak laporan kelulusan:', err);
     showNotification('error', 'Gagal mencetak: ' + err.message);
     
-    // Restore button state on error
     const printBtn = document.querySelector(`button[onclick="printDetailKelulusan(${siswa_id})"]`);
     if (printBtn) {
       printBtn.innerHTML = '<i class="bi bi-printer"></i> Cetak';
@@ -1103,21 +1067,6 @@ window.printDetailKelulusan = async function(siswa_id) {
     }
   }
 };
-
-/**
- * Helper function - sama seperti yang ada di file asli
- */
-function getNilaiAkhirRataRata(siswa) {
-  if (!siswa.hasil_per_mapel || siswa.hasil_per_mapel.length === 0) {
-    return 0;
-  }
-
-  const totalNilai = siswa.hasil_per_mapel.reduce((sum, mapel) => {
-    return sum + (mapel.nilai_akhir || 0);
-  }, 0);
-
-  return totalNilai / siswa.hasil_per_mapel.length;
-}
 
 // ==========================
 // INIT REFRESH BUTTON
@@ -1141,7 +1090,7 @@ function initRefreshButton() {
       btnRefresh.disabled = false;
     } catch (err) {
       console.error('Gagal refresh:', err);
-      showNotification('error', 'Gagal refresh data');
+      showNotification('error', 'Gagal refresh data: ' + err.message);
       
       const icon = btnRefresh.querySelector('i');
       icon.classList.remove('spinner-border', 'spinner-border-sm');
