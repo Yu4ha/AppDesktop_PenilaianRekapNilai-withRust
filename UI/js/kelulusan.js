@@ -1,5 +1,5 @@
 /**
- * kelulusan.js
+ * kelulusan.js - Fixed for Tauri
  * ============================================
  * Frontend Logic untuk Halaman Laporan Kelulusan
  * 
@@ -12,18 +12,37 @@
  */
 
 // ==========================
-// TAURI API WRAPPER
+// TAURI HELPER
 // ==========================
-const TauriAPI = {
-  async invoke(command, payload = {}) {
-    try {
-      return await window.__TAURI__.invoke(command, payload);
-    } catch (err) {
-      console.error(`Tauri command failed: ${command}`, err);
-      throw err;
+const { invoke } = window.__TAURI__.tauri;
+
+/**
+ * Helper untuk invoke Tauri command dengan auto-unwrap ApiResponse
+ */
+async function invokeCommand(cmd, args = {}) {
+  try {
+    console.log(`🔄 Invoking: ${cmd}`, args);
+    
+    // Timeout 30 detik
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Timeout: ${cmd} took too long (>30s)`)), 30000)
+    );
+    
+    const invokePromise = invoke(cmd, args);
+    
+    const response = await Promise.race([invokePromise, timeoutPromise]);
+    
+    console.log(`✅ Response from ${cmd}:`, response);
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Command failed');
     }
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error invoking ${cmd}:`, error);
+    throw error;
   }
-};
+}
 
 // ==========================
 // STATE & FILTER
@@ -34,6 +53,7 @@ let currentFilter = {
 };
 
 let allLaporanKelulusan = [];
+let isLoading = false;
 
 // ==========================
 // INIT & LOAD DATA
@@ -41,8 +61,9 @@ let allLaporanKelulusan = [];
 (async () => {
   try {
     await initFilterControls();
-    await loadLaporanKelulusan();
+    // Tidak auto-load, tunggu user klik "Terapkan Filter"
     initRefreshButton();
+    console.log('✅ Init complete. Click "Terapkan Filter" to load data.');
   } catch (err) {
     console.error('Gagal inisialisasi halaman kelulusan:', err);
     showNotification('error', 'Gagal memuat halaman kelulusan');
@@ -115,14 +136,9 @@ document.head.appendChild(style);
 async function initFilterControls() {
   try {
     // Get tahun ajaran aktif & daftar tahun ajaran
-    const tahunAjaranResponse = await TauriAPI.invoke('get_tahun_ajaran_aktif');
-    const tahunAjaranAktif = tahunAjaranResponse.data || tahunAjaranResponse;
-    
-    const daftarResponse = await TauriAPI.invoke('get_daftar_tahun_ajaran');
-    const daftarTahunAjaran = daftarResponse.data || daftarResponse;
-    
-    const siswaResponse = await TauriAPI.invoke('get_all_siswa');
-    const allSiswa = siswaResponse.data || siswaResponse;
+    const tahunAjaranAktif = await invokeCommand('get_tahun_ajaran_aktif');
+    const daftarTahunAjaran = await invokeCommand('get_daftar_tahun_ajaran');
+    const allSiswa = await invokeCommand('get_all_siswa');
 
     currentFilter.tahun_ajaran = tahunAjaranAktif;
 
@@ -249,20 +265,28 @@ async function applyFilter() {
 // LOAD LAPORAN KELULUSAN
 // ==========================
 async function loadLaporanKelulusan() {
+  if (isLoading) {
+    console.warn('⚠️ Already loading, skipping duplicate call');
+    return;
+  }
+
+  isLoading = true;
+
   try {
     console.log('Loading laporan kelulusan...');
+    console.time('Load Duration');
 
     // Call backend dengan Tauri API
-    const statistikKelulusan = await TauriAPI.invoke('hitung_statistik_kelulusan');
+    console.log('🔄 Calling hitung_statistik_kelulusan...');
+    const data = await invokeCommand('hitung_statistik_kelulusan');
+    console.timeEnd('Load Duration');
 
-    console.log('Statistik kelulusan loaded:', statistikKelulusan);
+    console.log('Statistik kelulusan loaded:', data);
 
-    if (!statistikKelulusan) {
+    if (!data) {
       throw new Error('Gagal memuat data kelulusan dari backend');
     }
 
-    // Extract data dari response (Tauri mengembalikan {success: true, data: {...}})
-    const data = statistikKelulusan.data || statistikKelulusan;
     allLaporanKelulusan = data.detail || [];
 
     // Filter berdasarkan kelas (jika ada)
@@ -306,6 +330,8 @@ async function loadLaporanKelulusan() {
         </tr>
       `;
     }
+  } finally {
+    isLoading = false;
   }
 }
 
@@ -488,15 +514,13 @@ function renderTabelKelulusan(data) {
 window.showDetailKelulusan = async function(siswa_id) {
   try {
     // Call backend dengan Tauri API
-    const detailKelulusan = await TauriAPI.invoke('get_rekap_kelulusan', { siswa_id });
+    const detail = await invokeCommand('get_rekap_kelulusan', { siswa_id });
     
-    if (!detailKelulusan) {
+    if (!detail) {
       showNotification('error', 'Gagal memuat detail kelulusan');
       return;
     }
 
-    // Extract dari response Tauri {success: true, data: {...}}
-    const detail = detailKelulusan.data || detailKelulusan;
     const siswa = detail.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
     
     if (!siswa) {
@@ -505,8 +529,8 @@ window.showDetailKelulusan = async function(siswa_id) {
     }
 
     // Override dengan data detail dari backend
-    if (detail.nilai_per_mapel) {
-      siswa.hasil_per_mapel = detail.nilai_per_mapel;
+    if (detail.detail_per_mapel) {
+      siswa.hasil_per_mapel = detail.detail_per_mapel;
     }
     if (detail.status) {
       siswa.statistik = detail.status.statistik;
@@ -619,28 +643,27 @@ window.printDetailKelulusan = async function(siswa_id) {
     }
 
     // Call backend dengan Tauri API
-    const detailKelulusan = await TauriAPI.invoke('get_rekap_kelulusan', { siswa_id });
+    const detail = await invokeCommand('get_rekap_kelulusan', { siswa_id });
     
-    if (!detailKelulusan) {
+    if (!detail) {
       throw new Error('Gagal memuat data kelulusan');
     }
 
-    const detail = detailKelulusan.data || detailKelulusan;
     const siswa = detail.siswa || allLaporanKelulusan.find(s => s.siswa_id === siswa_id);
     
     if (!siswa) {
       throw new Error('Data siswa tidak ditemukan');
     }
 
-    if (detail.nilai_per_mapel) {
-      siswa.hasil_per_mapel = detail.nilai_per_mapel;
+    if (detail.detail_per_mapel) {
+      siswa.hasil_per_mapel = detail.detail_per_mapel;
     }
     if (detail.status) {
       siswa.statistik = detail.status.statistik;
       siswa.status_kelulusan = detail.status.kelulusan;
     }
 
-    // Sekolah info - TANPA nomor telepon
+    // Sekolah info
     const sekolahInfo = {
       nama: 'SD Swasta Plus Insan Mulia',
       alamat: 'Jl. Pasir Randu, Kp. Ceper, Ds. Sukasari, Kec. Serang Baru, Kab. Bekasi',
@@ -668,7 +691,7 @@ window.printDetailKelulusan = async function(siswa_id) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Laporan Kelulusan - ${siswa.nama}</title>
-<style>
+        <style>
           * {
             margin: 0;
             padding: 0;
@@ -882,18 +905,9 @@ window.printDetailKelulusan = async function(siswa_id) {
             color: white;
           }
 
-          .badge-warning {
-            background: #ffc107;
-            color: #000;
-          }
-
           @media print {
             body {
               padding: 1cm;
-            }
-
-            .no-print {
-              display: none !important;
             }
 
             @page {
@@ -1153,3 +1167,5 @@ if (typeof module !== 'undefined' && module.exports) {
     currentFilter
   };
 }
+
+console.log('✅ kelulusan.js loaded successfully (Tauri Fixed)');

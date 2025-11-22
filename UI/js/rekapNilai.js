@@ -1,5 +1,5 @@
 /**
- * rekapNilai.js - With Ranking Feature
+ * rekapNilai.js - With Ranking Feature (Tauri Fixed)
  * ==========================================
  * Halaman rekap nilai lengkap dengan detail per mapel
  * Termasuk breakdown kehadiran, ranking, dan export Excel/PDF
@@ -8,6 +8,7 @@
  * - ✅ Ranking berdasarkan rata-rata nilai
  * - ✅ Display ranking di kolom predikat
  * - ✅ Ranking included di export Excel
+ * - ✅ Fixed for Tauri API
  * ==========================================
  */
 
@@ -23,6 +24,27 @@ let currentFilter = {
   semester: 1,
   tahun_ajaran: null
 };
+
+// ==========================
+// TAURI HELPER
+// ==========================
+const { invoke } = window.__TAURI__.tauri;
+
+/**
+ * Helper untuk invoke Tauri command dengan auto-unwrap ApiResponse
+ */
+async function invokeCommand(cmd, args = {}) {
+  try {
+    const response = await invoke(cmd, args);
+    if (!response.success) {
+      throw new Error(response.error || 'Command failed');
+    }
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error invoking ${cmd}:`, error);
+    throw error;
+  }
+}
 
 // ==========================
 // INITIALIZATION
@@ -48,10 +70,10 @@ async function initializePage() {
   try {
     // Load data awal dengan parallel processing
     const [tahunAjaranAktif, daftarTahunAjaran, mapelList, siswaList] = await Promise.all([
-      window.electronAPI.getTahunAjaranAktif(),
-      window.electronAPI.getDaftarTahunAjaran(),
-      window.electronAPI.getAllMapel(),
-      window.electronAPI.getAllSiswa()
+      invokeCommand('get_tahun_ajaran_aktif'),
+      invokeCommand('get_daftar_tahun_ajaran'),
+      invokeCommand('get_all_mapel'),
+      invokeCommand('get_all_siswa')
     ]);
 
     // Set initial state
@@ -184,7 +206,7 @@ function updateTableHeader() {
     const th = document.createElement('th');
     th.className = 'mapel-header';
     th.textContent = mapel.nama_mapel;
-    th.title = mapel.nama_mapel; // Tooltip
+    th.title = mapel.nama_mapel;
     tableHeader.appendChild(th);
   });
 
@@ -261,37 +283,49 @@ async function loadRekapData() {
     const detailedData = await Promise.all(
       siswaList.map(async (siswa) => {
         try {
-          const context = {
-            kelas: siswa.kelas,
-            semester: currentFilter.semester,
-            tahun_ajaran: currentFilter.tahun_ajaran
+          // Prepare request object sesuai format Rust
+          const rekapRequest = {
+            req: {
+              siswa_id: siswa.id,
+              context: {
+                kelas: siswa.kelas,
+                semester: currentFilter.semester,
+                tahun_ajaran: currentFilter.tahun_ajaran
+              }
+            }
           };
 
           // 1. Get rekap nilai lengkap
-          const rekapData = await window.electronAPI.getRekapNilai(siswa.id, context);
+          const rekapData = await invokeCommand('get_rekap_nilai', rekapRequest);
 
-          // Check for backend errors
-          if (rekapData.error) {
-            console.error('❌ Backend error untuk', siswa.nama, ':', rekapData.error);
-            throw new Error(rekapData.error);
-          }
+          // Prepare kehadiran request
+          const kehadiranRequest = {
+            req: {
+              siswa_id: siswa.id,
+              kelas: siswa.kelas,
+              semester: currentFilter.semester,
+              tahun_ajaran: currentFilter.tahun_ajaran
+            }
+          };
 
           // 2. Get kehadiran breakdown
-          const kehadiranData = await window.electronAPI.getKehadiran(
-            siswa.id,
-            siswa.kelas,
-            currentFilter.semester,
-            currentFilter.tahun_ajaran
-          );
+          const kehadiranData = await invokeCommand('get_kehadiran', kehadiranRequest);
 
-          // 3. Map kehadiran data
-          const kehadiran = {
-            hadir: kehadiranData?.breakdown?.hadir || 0,
-            sakit: kehadiranData?.breakdown?.sakit || 0,
-            izin: kehadiranData?.breakdown?.izin || 0,
-            alpa: kehadiranData?.breakdown?.alpa || 0,
-            total: kehadiranData?.breakdown?.total || 0,
-            nilai: kehadiranData?.nilai || 0
+          // 3. Map kehadiran data - data ada di kehadiranData.breakdown
+          const kehadiran = kehadiranData ? {
+            hadir: kehadiranData.breakdown?.hadir || 0,
+            sakit: kehadiranData.breakdown?.sakit || 0,
+            izin: kehadiranData.breakdown?.izin || 0,
+            alpa: kehadiranData.breakdown?.alpa || 0,
+            total: kehadiranData.breakdown?.total || 0,
+            nilai: kehadiranData.nilai || 0
+          } : {
+            hadir: 0,
+            sakit: 0,
+            izin: 0,
+            alpa: 0,
+            total: 0,
+            nilai: 0
           };
 
           // 4. Map detail per mapel
@@ -353,10 +387,8 @@ async function loadRekapData() {
     let currentRank = 1;
     detailedData.forEach((siswa, index) => {
       if (index > 0 && siswa.rata_rata === detailedData[index - 1].rata_rata) {
-        // Nilai sama dengan siswa sebelumnya, pakai ranking yang sama
         siswa.ranking = detailedData[index - 1].ranking;
       } else {
-        // Nilai berbeda, gunakan ranking baru
         siswa.ranking = currentRank;
       }
       currentRank++;
@@ -393,7 +425,7 @@ function renderTable(data) {
 
   // Handle empty data
   if (!data || data.length === 0) {
-    const totalCols = 10 + allMapel.length + 6; // +1 untuk kolom ranking
+    const totalCols = 10 + allMapel.length + 6;
     tbody.innerHTML = `
       <tr>
         <td colspan="${totalCols}" class="text-center text-muted py-4">
@@ -417,7 +449,6 @@ function renderTable(data) {
       return 'bg-secondary';
     };
     
-    // ✅ Ranking badge class (Top 3 special styling)
     const getRankingBadgeClass = (rank) => {
       if (rank === 1) return 'ranking-gold';
       if (rank === 2) return 'ranking-silver';
@@ -554,30 +585,22 @@ async function handleExport() {
   try {
     console.log('🚀 Memulai export Excel...');
     
-    // Validasi data
     if (!filteredData || filteredData.length === 0) {
       showNotification('warning', 'Tidak ada data untuk di-export. Silakan terapkan filter terlebih dahulu.');
       return;
     }
 
-    // Validasi library XLSX
     if (typeof XLSX === 'undefined') {
       throw new Error('Library SheetJS (XLSX) tidak ditemukan. Pastikan library sudah dimuat.');
     }
     
-    // Ambil nilai filter untuk info
     const kelas = document.getElementById('filterKelas')?.value || 'Semua';
     const semester = document.getElementById('filterSemester')?.value || '-';
     const tahunAjaran = document.getElementById('filterTahunAjaran')?.value || '-';
     
-    // Buat workbook baru
     const wb = XLSX.utils.book_new();
     
-    // ============================================
     // SHEET 1: DATA REKAP NILAI
-    // ============================================
-    
-    // Header informasi
     const infoRows = [
       ['REKAP NILAI SISWA'],
       ['Kelas', kelas],
@@ -585,26 +608,20 @@ async function handleExport() {
       ['Tahun Ajaran', tahunAjaran],
       ['Total Siswa', filteredData.length],
       ['Tanggal Export', new Date().toLocaleDateString('id-ID')],
-      [], // Row kosong
+      [],
     ];
     
-    // Header tabel (dengan Ranking)
     const headers = ['No', 'NIS', 'NISN', 'Nama', 'Kelas'];
     
-    // Tambah header mapel
     allMapel.forEach(mapel => {
       headers.push(mapel.nama_mapel);
     });
     
-    // Tambah header kehadiran
     headers.push('Hadir', 'Sakit', 'Izin', 'Alpa', 'Total Hadir', 'Nilai Kehadiran');
-    
-    // Tambah header summary dengan Ranking
     headers.push('Rata-rata', 'Ranking', 'Predikat', 'Status Kenaikan');
     
     infoRows.push(headers);
     
-    // Data rows (sudah tersort by ranking)
     const dataRows = filteredData.map((siswa, index) => {
       const row = [
         index + 1,
@@ -614,20 +631,17 @@ async function handleExport() {
         siswa.kelas || '-'
       ];
       
-      // Tambah nilai per mapel
       allMapel.forEach(mapel => {
         const nilaiMapel = siswa.detail_per_mapel?.find(d => d.mapel_id === mapel.id);
         row.push(nilaiMapel?.nilai_akhir || 0);
       });
       
-      // Tambah kehadiran
       const k = siswa.kehadiran;
       row.push(k.hadir, k.sakit, k.izin, k.alpa, k.total, parseFloat(k.nilai.toFixed(2)));
       
-      // Tambah summary dengan ranking
       row.push(
         siswa.rata_rata > 0 ? parseFloat(siswa.rata_rata.toFixed(2)) : 0,
-        siswa.ranking || '-', // ✅ RANKING COLUMN
+        siswa.ranking || '-',
         siswa.predikat || '-',
         siswa.status_naik_kelas || '-'
       );
@@ -635,54 +649,39 @@ async function handleExport() {
       return row;
     });
     
-    // Gabungkan semua data
-    const allData = [...infoRows, ...dataRows];
+    const allSheetData = [...infoRows, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(allSheetData);
     
-    // Buat worksheet
-    const ws = XLSX.utils.aoa_to_sheet(allData);
-    
-    // Styling dan format
     const range = XLSX.utils.decode_range(ws['!ref']);
     
-    // Merge cells untuk title
     ws['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } } // Merge title
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
     ];
     
-    // Set column widths
     const colWidths = [
-      { wch: 5 },  // No
-      { wch: 12 }, // NIS
-      { wch: 12 }, // NISN
-      { wch: 25 }, // Nama
-      { wch: 8 },  // Kelas
+      { wch: 5 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 25 },
+      { wch: 8 },
     ];
     
-    // Width untuk mapel columns
     allMapel.forEach(() => {
       colWidths.push({ wch: 12 });
     });
     
-    // Width untuk kehadiran
     colWidths.push({ wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 15 });
-    
-    // Width untuk summary + ranking
     colWidths.push({ wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 15 });
     
     ws['!cols'] = colWidths;
     
-    // Tambahkan worksheet ke workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Rekap Nilai');
     
-    // ============================================
     // SHEET 2: STATISTIK
-    // ============================================
-    
     const naikKelas = filteredData.filter(d => d.status_naik_kelas === 'Naik Kelas').length;
     const tidakNaik = filteredData.filter(d => d.status_naik_kelas === 'Tidak Naik Kelas').length;
     const belumLengkap = filteredData.filter(d => d.status_naik_kelas === 'Belum Lengkap').length;
     
-    // Hitung rata-rata per mapel
     const statsPerMapel = allMapel.map(mapel => {
       const nilaiList = filteredData
         .map(siswa => {
@@ -701,7 +700,6 @@ async function handleExport() {
       return [mapel.nama_mapel, parseFloat(avg), parseFloat(max), parseFloat(min)];
     });
     
-    // ✅ TOP 10 RANKING
     const top10 = filteredData.slice(0, 10).map(siswa => [
       siswa.ranking,
       siswa.nama,
@@ -740,7 +738,6 @@ async function handleExport() {
     
     const wsStats = XLSX.utils.aoa_to_sheet(statsData);
     
-    // Set column widths untuk stats
     wsStats['!cols'] = [
       { wch: 25 },
       { wch: 15 },
@@ -749,21 +746,16 @@ async function handleExport() {
       { wch: 15 }
     ];
     
-    // Merge cells untuk title
     wsStats['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }
     ];
     
     XLSX.utils.book_append_sheet(wb, wsStats, 'Statistik');
     
-    // ============================================
     // GENERATE & DOWNLOAD FILE
-    // ============================================
-    
     const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const fileName = `Rekap_Nilai_${kelas}_Sem${semester}_${timestamp}.xlsx`;
     
-    // Write file
     XLSX.writeFile(wb, fileName);
     
     console.log('✅ Export Excel berhasil:', fileName);
@@ -779,21 +771,18 @@ async function handleExport() {
 // EVENT LISTENERS
 // ==========================
 function setupEventListeners() {
-  // Tombol apply filter
   const btnApplyFilter = document.getElementById('btnApplyFilter');
   if (btnApplyFilter) {
     btnApplyFilter.addEventListener('click', applyFilters);
     console.log('✅ Event listener btnApplyFilter terpasang');
   }
 
-  // Tombol export
   const btnExport = document.getElementById('btnExport');
   if (btnExport) {
     btnExport.addEventListener('click', handleExport);
     console.log('✅ Event listener btnExport terpasang');
   }
 
-  // Apply filter on Enter key
   ['filterKelas', 'filterSemester', 'filterTahunAjaran'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -805,7 +794,6 @@ function setupEventListeners() {
     }
   });
   
-  // Hover effects untuk tombol
   if (btnApplyFilter) {
     btnApplyFilter.addEventListener('mouseenter', function() {
       this.style.background = '#0b5ed7';
@@ -833,7 +821,7 @@ function showLoading(show) {
   if (!tbody) return;
 
   if (show) {
-    const totalCols = 10 + allMapel.length + 6; // +1 untuk ranking
+    const totalCols = 10 + allMapel.length + 6;
     tbody.innerHTML = `
       <tr>
         <td colspan="${totalCols}" class="text-center py-5">
@@ -848,8 +836,6 @@ function showLoading(show) {
 }
 
 function showNotification(type, message) {
-  // Implementasi notifikasi sederhana dengan alert
-  // Bisa diganti dengan toast notification library
   const icons = {
     success: '✅',
     error: '❌',
@@ -860,7 +846,6 @@ function showNotification(type, message) {
   const icon = icons[type] || 'ℹ️';
   alert(`${icon} ${message}`);
   
-  // Log ke console
   console.log(`[${type.toUpperCase()}]`, message);
 }
 
@@ -899,4 +884,4 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-console.log('✅ rekapNilai.js loaded successfully with RANKING feature');
+console.log('✅ rekapNilai.js loaded successfully with RANKING feature (Tauri Fixed)');
