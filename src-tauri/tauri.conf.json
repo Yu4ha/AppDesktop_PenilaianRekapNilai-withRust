@@ -22,6 +22,7 @@
     ],
     "bundle": {
       "identifier": "com.darma.penilaian",
+      "icon": ["../UI/assets/512x512.ico"],
       "active": true
     },
     "allowlist": {

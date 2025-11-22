@@ -462,7 +462,7 @@ function renderKehadiranTable() {
       <td>${idx + 1}</td>
       <td>${siswa.nis}</td>
       <td>${siswa.nisn || '-'}</td>
-      <td style="text-align: left; padding-left: 10px;">${escapeHtml(siswa.nama)}</td>
+      <td style="text-align: center; padding-left: 10px;">${escapeHtml(siswa.nama)}</td>
       <td>
         <input 
           type="number" 
@@ -552,7 +552,7 @@ function renderRiwayatTable() {
       <td>${idx + 1}</td>
       <td>${item.nis}</td>
       <td>${item.nisn || '-'}</td>
-      <td style="text-align: left; padding-left: 10px;">${escapeHtml(item.nama_siswa)}</td>
+      <td style="text-align: center; padding-left: 10px;">${escapeHtml(item.nama_siswa)}</td>
 
       <td style="background: #4caf50; color: white; text-align: center;">${item.hadir ?? 0}</td>
       <td style="background: #ff9800; color: white; text-align: center;">${item.sakit ?? 0}</td>
