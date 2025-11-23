@@ -31,7 +31,7 @@ src-tauri/
 
 ## 📁 **Struktur root folder projek:**
 
-ppDesktop_PenilaianRekapNilai-withRust/
+Desktop_PenilaianRekapNilai-withRust/
 ├── build/
 ├── node_modules/
 ├── package.json
