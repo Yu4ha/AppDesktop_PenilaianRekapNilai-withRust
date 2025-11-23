@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <title>Sistem Penilaian & Rekap Nilai | Bank Data Siswa</title>
+  <script type="module" crossorigin src="/assets/dataSiswa-Cz2SJDsd.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/closeWindow-BOCvx3Ut.js">
+  <link rel="modulepreload" crossorigin href="/assets/tauriAPIhelper-CqjvmD2y.js">
+  <link rel="stylesheet" crossorigin href="/assets/closeWindow-B3TjsKAG.css">
+  <link rel="stylesheet" crossorigin href="/assets/icon-JsAHcaQH.css">
+</head>
+<body class="app-layout">
+<!-- sidebar  -->
+  <aside class="sidebar">
+      <div class="sidebar-header d-flex align-items-center gap-2">
+        <img src="/assets/icon-p0ipGZpq.png" 
+            alt="Logo" 
+            class="sidebar-logo">
+        <div class="d-flex flex-column pt-2">
+          <h2 class="sidebar-title mb-0">Dashboard</h2>
+          <p class="mb-0 ms-2" style="font-size: 14px; text-decoration: none; color: white;">Aplikasi Rekap Nilai</p>
+        </div>
+      </div>
+
+    <nav class="nav">
+      <a href="index.html" class="nav-item">
+        <span class="icon">🏠</span>
+        <span class="label">Beranda</span>
+      </a>
+      <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">DATA MASTER</span>
+      <a href="index-dataSiswa.html" class="nav-item active">
+        <span class="icon">📁</span>
+        <span class="label">Data Siswa</span>
+      </a>
+      <a href="index-mapel.html" class="nav-item">
+        <span class="icon">📚</span>
+        <span class="label">Mata Pelajaran</span>
+      </a>
+      <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">PENILAIAN</span>
+      <a href="index-penilaian.html" class="nav-item">
+        <span class="icon">📊</span>
+        <span class="label">Penilaian</span>
+      </a>
+      <a href="index-absensi.html" class="nav-item">
+        <span class="icon">🕒</span>
+        <span class="label">Absensi</span>
+      </a>
+            <span class="ps-3 mt-3" style="color: rgba(157, 198, 233, 0.746);">CETAK LAPORAN</span>
+      <a href="index-rekapNilai.html" class="nav-item">
+        <span class="icon">🧾</span>
+        <span class="label">Rekap Nilai</span>
+      </a>
+      <a href="index-kelulusan.html" class="nav-item">
+        <span class="icon bi bi-mortarboard-fill"></span>
+        <span class="label ms-2">Laporan Kelulusan</span>
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <button id="logoutBtn" title="Tutup Aplikasi">Keluar</button>
+    </div>
+  </aside>
+
+  <!-- content -->
+  <main class="main-content">
+    <header>
+      <h1>Data Siswa 📁</h1>
+      <p class="subtitle">Kelola data siswa yang terdaftar dalam sistem</p>
+    </header>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <button class="btn-add" id="btnTambahSiswa">
+        <span>➕</span> Tambah Siswa
+      </button>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Cari nama atau NIS siswa...">
+      </div>
+    </div>
+
+    <!-- Tabel Data Siswa -->
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="table table-striped" border="1">
+          <thead>
+            <tr>
+              <th rowspan="2">No</th>
+              <th rowspan="2">NIS</th>
+              <th rowspan="2">NISN</th>
+              <th rowspan="2">Nama Siswa</th>
+              <th rowspan="2">Kelas</th>
+              <th rowspan="2">Jenis Kelamin</th>
+              <th rowspan="2">Tanggal Dibuat</th>
+              <th colspan="2">Nama Orang Tua</th>
+              <th rowspan="2">Alamat Orang Tua</th>
+              <th rowspan="2">Kontak Orang Tua</th>
+              <th rowspan="2">Alamat Email Orang Tua</th>
+              <th colspan="2">Pekerjaan Orang Tua</th>
+              <th rowspan="2">Nama Wali</th>
+              <th rowspan="2">Alamat Wali</th>
+              <th rowspan="2">Kontak Wali</th>
+              <th rowspan="2">Alamat Email Wali</th>
+              <th rowspan="2">Pekerjaan Wali</th>
+              <th rowspan="2">Aksi</th>
+            </tr>
+            <tr>
+              <th>Ayah</th>
+              <th>Ibu</th>
+              <th>Ayah</th>
+              <th>Ibu</th>
+            </tr>
+          </thead>
+          <tbody id="siswaTableBody">
+            <!-- Data siswa akan di-render dari database -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+    <!-- Modal Tambah/Edit Siswa -->
+    <div class="modal fade" id="modalSiswa" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalTitle">
+              <i class="bi bi-person-plus-fill"></i> Tambah Siswa
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="formSiswa">
+              <input type="hidden" id="siswaId">
+              
+              <!-- Data Siswa -->
+              <div class="section-header">
+                <h6><i class="bi bi-person-badge"></i> Data Siswa</h6>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nis" class="form-label">NIS <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="nis" placeholder="Nomor Induk Siswa (9-11 digit)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g,'')" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="nisn" class="form-label">NISN</label>
+                  <input type="text" id="nisn" class="form-control" placeholder="Nomor Induk Siswa Nasional (9-11 digit)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g,'')">
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nama" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="nama" placeholder="Nama lengkap siswa" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="kelas" class="form-label">Kelas <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="kelas" placeholder="Contoh: 6A" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="jenis_kelamin" class="form-label">Jenis Kelamin <span class="text-danger">*</span></label>
+                  <select class="form-select" id="jenis_kelamin" required>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Data Orang Tua -->
+              <div class="section-header mt-4">
+                <h6><i class="bi bi-people-fill"></i> Data Orang Tua</h6>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nama_ayah" class="form-label">Nama Ayah</label>
+                  <input type="text" class="form-control" id="nama_ayah" placeholder="Nama lengkap ayah">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="nama_ibu" class="form-label">Nama Ibu</label>
+                  <input type="text" class="form-control" id="nama_ibu" placeholder="Nama lengkap ibu">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="pekerjaan_ayah" class="form-label">Pekerjaan Ayah</label>
+                  <input type="text" class="form-control" id="pekerjaan_ayah" placeholder="Contoh: Pegawai Swasta">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="pekerjaan_ibu" class="form-label">Pekerjaan Ibu</label>
+                  <input type="text" class="form-control" id="pekerjaan_ibu" placeholder="Contoh: Ibu Rumah Tangga">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="alamat_ortu" class="form-label">Alamat Orang Tua</label>
+                <textarea class="form-control" id="alamat_ortu" rows="2" placeholder="Alamat lengkap orang tua"></textarea>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="kontak_ortu" class="form-label">Nomor Kontak Orang Tua</label>
+                  <input type="text" class="form-control" id="kontak_ortu" placeholder="Contoh: 08123456789" maxlength="12" oninput="this.value = this.value.replace(/[^0-9+\-\s()]/g,'')">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="email_ortu" class="form-label">Email Orang Tua</label>
+                  <input type="email" class="form-control" id="email_ortu" placeholder="Contoh: orangtua@email.com">
+                </div>
+              </div>
+
+              <!-- Data Wali -->
+              <div class="section-header mt-4">
+                <h6><i class="bi bi-person-check-fill"></i> Data Wali (Opsional)</h6>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nama_wali" class="form-label">Nama Wali</label>
+                  <input type="text" class="form-control" id="nama_wali" placeholder="Nama lengkap wali">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="pekerjaan_wali" class="form-label">Pekerjaan Wali</label>
+                  <input type="text" class="form-control" id="pekerjaan_wali" placeholder="Contoh: Wiraswasta">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="alamat_wali" class="form-label">Alamat Wali</label>
+                <textarea class="form-control" id="alamat_wali" rows="2" placeholder="Alamat lengkap wali"></textarea>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="kontak_wali" class="form-label">Nomor Kontak Wali</label>
+                  <input type="text" class="form-control" id="kontak_wali" placeholder="Contoh: 08123456789" maxlength="12" oninput="this.value = this.value.replace(/[^0-9+\-\s()]/g,'')">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="email_wali" class="form-label">Email Wali</label>
+                  <input type="email" class="form-control" id="email_wali" placeholder="Contoh: wali@email.com">
+                </div>
+              </div>
+
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel btn-danger" data-bs-dismiss="modal">❌ Batal</button>
+            <button type="button" class="btn btn-primary" id="btnSaveSiswa">💾 Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- script js cdn bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

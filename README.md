@@ -66,4 +66,28 @@ ppDesktop_PenilaianRekapNilai-withRust/
 HOW TO RUN THIS APP
 ==============================================================
 
-You just type this "npm run tauri dev" in konsole/terminal/cmd or anything konsole what you have.
+Just type npm run tauri dev in your console, terminal, CMD, or any console you have.
+
+==============================================================
+CARA MEMBANGUN APLIKASI DESKTOP SISPENILAN
+==============================================================
+
+1. Build frontend (output ke UI/dist/)
+- npm run build
+
+2. Build Tauri jadi .exe
+- npm run tauri build
+
+==============================================================
+HAL-HAL YANG PERLU DI PERHATIKAN
+==============================================================
+
+- Pastikan PC/Laptop kamu sudah ada node.js versi 20 minimal dan rust lalu Desktop development with C#/C++ <== ini bisa kamu unduh dari visual studio installer biasanya sudah include kalau kamu install rust lebih dulu.
+
+- Ini projek yang sepenuhnya open source jadi kamu bebas mengambil/menjarah :) memperbaiki, meningkatkan, memproduksi massal untuk tujuan komersil (Asal legal!), dan atau mempelajarinya.
+
+
+Written 🖋️ by: Yu4ha []~(￣▽￣)~*
+
+
+log date: 23, November/11 | 2025
