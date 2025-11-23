@@ -30,7 +30,7 @@ src-tauri/
         └── penilaian.rs    ⭐ Business logic (ranking, kelulusan)
 
 ## 📁 **Struktur root folder projek:**
-```
+
 ppDesktop_PenilaianRekapNilai-withRust/
 ├── build/
 ├── node_modules/
