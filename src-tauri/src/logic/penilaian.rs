@@ -19,7 +19,9 @@
 use rusqlite::Result as SqlResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Mutex; 
 use log::{info, warn, error, debug};
+use once_cell::sync::Lazy;
 
 use crate::models::nilai::{
     self, KomponenNilaiSemester, NilaiAkhirKelulusan,
@@ -27,6 +29,14 @@ use crate::models::nilai::{
     tentukan_predikat, generate_tahun_ajaran,
 };
 use crate::database;
+
+/// LOCK untuk serialize hitung_statistik_kelulusan
+static HITUNG_KELULUSAN_LOCK: Lazy<Mutex<()>> = 
+    Lazy::new(|| Mutex::new(()));
+
+/// CACHE untuk akumulasi nilai (avoid repeated heavy computation)
+static AKUMULASI_CACHE: Lazy<Mutex<HashMap<(i64, i64), crate::models::nilai::AkumulasiNilai>>> = 
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 // ==========================
 // CONSTANTS
@@ -820,7 +830,17 @@ pub fn hitung_statistik(kelas: Option<&str>, semester: i32, tahun_ajaran: &str) 
 
 /// Statistik kelulusan (Kelas 6)
 pub fn hitung_statistik_kelulusan() -> SqlResult<StatistikKelulusan> {
-    let siswa_kelas_6: Vec<_> = get_all_siswa()?
+    info!("🔄 START hitung_statistik_kelulusan");
+    
+    // ✅ ACQUIRE LOCK dulu (serialize calls)
+    let _lock = HITUNG_KELULUSAN_LOCK.lock().unwrap();
+    info!("  ✅ Acquired serialization lock");
+    
+    // Get semua siswa kelas 6 dalam 1 query
+    let all_siswa = get_all_siswa()?;
+    info!("📊 Total semua siswa: {}", all_siswa.len());
+    
+    let siswa_kelas_6: Vec<_> = all_siswa
         .into_iter()
         .filter(|s| {
             if let Ok(tingkat) = extract_tingkat_kelas(&s.kelas) {
@@ -831,7 +851,10 @@ pub fn hitung_statistik_kelulusan() -> SqlResult<StatistikKelulusan> {
         })
         .collect();
 
+    info!("📊 Total siswa kelas 6: {}", siswa_kelas_6.len());
+
     if siswa_kelas_6.is_empty() {
+        info!("✅ DONE hitung_statistik_kelulusan (empty)");
         return Ok(StatistikKelulusan {
             total_siswa: 0,
             siswa_lulus: 0,
@@ -845,9 +868,23 @@ pub fn hitung_statistik_kelulusan() -> SqlResult<StatistikKelulusan> {
     let mut siswa_tidak_lulus = 0;
     let mut detail = Vec::new();
 
-    for siswa in &siswa_kelas_6 {
+    info!("🔄 Entering loop with {} siswa", siswa_kelas_6.len());
+
+    for (idx, siswa) in siswa_kelas_6.iter().enumerate() {
+        info!("🔄 Processing siswa {}/{}: {} (ID: {})", 
+              idx + 1, siswa_kelas_6.len(), siswa.nama, siswa.id);
+        
+        // ✅ NEW: Clear cache per siswa to avoid stale data
+        {
+            let mut cache = AKUMULASI_CACHE.lock().unwrap();
+            cache.clear();
+            info!("  ✅ Cleared cache for fresh computation");
+        }
+        
         match nilai::cek_kelulusan(siswa.id) {
             Ok(status_kelulusan) => {
+                info!("  ✅ Status: {}", status_kelulusan.status_kelulusan);
+                
                 if status_kelulusan.status_kelulusan == "LULUS" {
                     siswa_lulus += 1;
                 } else {
@@ -883,7 +920,9 @@ pub fn hitung_statistik_kelulusan() -> SqlResult<StatistikKelulusan> {
                 });
             }
             Err(e) => {
-                debug!("Skip siswa {}: {}", siswa.id, e);
+                error!("  ❌ Error cek kelulusan siswa {}: {}", siswa.id, e);
+                siswa_tidak_lulus += 1;
+                
                 detail.push(DetailKelulusan {
                     siswa_id: siswa.id,
                     nis: siswa.nis.clone(),
@@ -909,6 +948,11 @@ pub fn hitung_statistik_kelulusan() -> SqlResult<StatistikKelulusan> {
     } else {
         0.0
     };
+
+    info!("✅ DONE hitung_statistik_kelulusan: total={}, lulus={}, tidak_lulus={}, %={}", 
+          total_siswa, siswa_lulus, siswa_tidak_lulus, persen_lulus);
+
+    // ✅ Lock otomatis released saat _lock drop di akhir function
 
     Ok(StatistikKelulusan {
         total_siswa,

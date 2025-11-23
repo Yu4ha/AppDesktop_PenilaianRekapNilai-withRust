@@ -173,7 +173,7 @@ function handleEdit(id) {
     cancelBtn.id = 'cancelEditBtn';
     cancelBtn.type = 'button';
     cancelBtn.textContent = '❌ Batal';
-    cancelBtn.style.cssText = 'background:#95a5a6;color:white;margin-top:10px;width:100%;';
+    cancelBtn.style.cssText = 'background:#ff0000ff;color:white;margin-top:10px;width:100%;';
     cancelBtn.addEventListener('click', resetForm);
     submitBtn.parentNode.appendChild(cancelBtn);
   }

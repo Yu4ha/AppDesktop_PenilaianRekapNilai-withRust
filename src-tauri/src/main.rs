@@ -7,6 +7,10 @@ mod commands;
 mod logic;
 
 fn main() {
+        env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
+        .init();
+        
     // Initialize database
     database::init_database(None).expect("Failed to initialize database");
 

@@ -643,36 +643,96 @@ pub fn hitung_rata_per_jenis(
         .map_err(|e| rusqlite::Error::InvalidParameterName(e))?;
 
     let db = database::get_db();
-    let db_lock = db.lock().unwrap();
     
-    if let Some(ref conn) = *db_lock {
-        let mut stmt = conn.prepare(
-            "SELECT jenis, AVG(nilai) as rata
-             FROM nilai
-             WHERE siswa_id = ?1 AND mapel_id = ?2
-               AND kelas = ?3 AND semester = ?4 AND tahun_ajaran = ?5
-             GROUP BY jenis"
-        )?;
+    // Explicit scope untuk auto-drop lock
+    let result = {
+        let db_lock = db.lock().unwrap();
+        
+        if let Some(ref conn) = *db_lock {
+            let mut stmt = conn.prepare(
+                "SELECT jenis, AVG(nilai) as rata
+                 FROM nilai
+                 WHERE siswa_id = ?1 AND mapel_id = ?2
+                   AND kelas = ?3 AND semester = ?4 AND tahun_ajaran = ?5
+                 GROUP BY jenis"
+            )?;
 
-        let rows = stmt.query_map(
-            params![siswa_id, mapel_id, kelas, semester, tahun_ajaran],
-            |row| {
-                let jenis: String = row.get(0)?;
-                let rata: f64 = row.get(1)?;
-                Ok((jenis, rata))
-            },
-        )?;
+            let rows = stmt.query_map(
+                params![siswa_id, mapel_id, kelas, semester, tahun_ajaran],
+                |row| {
+                    let jenis: String = row.get(0)?;
+                    let rata: f64 = row.get(1)?;
+                    Ok((jenis, rata))
+                },
+            )?;
 
-        let mut result = HashMap::new();
-        for row in rows {
-            let (jenis, rata) = row?;
-            result.insert(jenis, rata);
+            let mut result = HashMap::new();
+            for row in rows {
+                let (jenis, rata) = row?;
+                result.insert(jenis, rata);
+            }
+
+            Ok(result)
+        } else {
+            Err(rusqlite::Error::InvalidQuery)
         }
+    }; // ← Lock di-drop di sini sebelum return
+    
+    result
+}
 
-        Ok(result)
-    } else {
-        Err(rusqlite::Error::InvalidQuery)
-    }
+/// Get kehadiran siswa - FIXED version
+pub fn get_kehadiran(
+    siswa_id: i64,
+    kelas: &str,
+    semester: i32,
+    tahun_ajaran: &str,
+) -> SqlResult<Option<KehadiranData>> {
+    let db = database::get_db();
+    
+    // Explicit scope untuk auto-drop lock
+    let result = {
+        let db_lock = db.lock().unwrap();
+        
+        if let Some(ref conn) = *db_lock {
+            let result = conn.query_row(
+                "SELECT id, nilai, hadir, sakit, izin, alpa
+                 FROM nilai
+                 WHERE siswa_id = ?1 AND mapel_id IS NULL 
+                   AND kelas = ?2 AND semester = ?3 
+                   AND tahun_ajaran = ?4 AND jenis = 'Kehadiran'",
+                params![siswa_id, kelas, semester, tahun_ajaran],
+                |row| {
+                    let hadir: i32 = row.get(2).unwrap_or(0);
+                    let sakit: i32 = row.get(3).unwrap_or(0);
+                    let izin: i32 = row.get(4).unwrap_or(0);
+                    let alpa: i32 = row.get(5).unwrap_or(0);
+
+                    Ok(KehadiranData {
+                        id: Some(row.get(0)?),
+                        nilai: row.get(1)?,
+                        breakdown: KehadiranBreakdown {
+                            hadir,
+                            sakit,
+                            izin,
+                            alpa,
+                            total: hadir + sakit + izin + alpa,
+                        },
+                    })
+                },
+            );
+
+            match result {
+                Ok(data) => Ok(Some(data)),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(e),
+            }
+        } else {
+            Err(rusqlite::Error::InvalidQuery)
+        }
+    }; // ← Lock di-drop di sini
+    
+    result
 }
 
 /// Hitung nilai akademik semester (v5.1 - Kehadiran MASUK)
@@ -710,24 +770,32 @@ pub fn hitung_komponen_nilai_semester(
     semester: i32,
     tahun_ajaran: &str,
 ) -> SqlResult<KomponenNilaiSemester> {
+    info!("    🔍 START hitung_komponen_nilai_semester: kelas={}, sem={}", kelas, semester);
+    
     validate_kelas_and_semester(kelas, semester)
         .map_err(|e| rusqlite::Error::InvalidParameterName(e))?;
 
+    info!("    ⏱️ Step 1: hitung_rata_per_jenis...");
     let mut rata_per_jenis = hitung_rata_per_jenis(siswa_id, mapel_id, kelas, semester, tahun_ajaran)?;
-
-    // ✅ PENTING: Ambil nilai kehadiran dari tabel nilai
-    if let Some(kehadiran) = get_kehadiran(siswa_id, kelas, semester, tahun_ajaran)? {
+    
+    info!("    ⏱️ Step 2: get_kehadiran...");
+    if let Ok(Some(kehadiran)) = get_kehadiran(siswa_id, kelas, semester, tahun_ajaran) {
         if kehadiran.nilai > 0.0 {
             rata_per_jenis.insert("Kehadiran".to_string(), kehadiran.nilai);
         }
     }
 
+    info!("    ⏱️ Step 3: hitung_nilai_akademik_semester...");
     let nilai_akademik = hitung_nilai_akademik_semester(&rata_per_jenis)?;
+    
+    info!("    ⏱️ Step 4: tentukan_predikat...");
     let predikat = tentukan_predikat(nilai_akademik)?;
-
-    // Get KKM dari mapel
+    
+    info!("    ⏱️ Step 5: get_kkm_mapel...");
     let kkm = get_kkm_mapel(mapel_id)?;
     let status = tentukan_status(nilai_akademik, kkm);
+
+    info!("    ✅ DONE hitung_komponen_nilai_semester: nilai={}", nilai_akademik);
 
     Ok(KomponenNilaiSemester {
         kelas: kelas.to_string(),
@@ -758,57 +826,83 @@ fn get_kkm_mapel(mapel_id: i64) -> SqlResult<i32> {
     }
 }
 
-/// Hitung akumulasi nilai 6 semester
+/// Hitung akumulasi nilai 6 semester - OPTIMIZED VERSION
 pub fn hitung_akumulasi_nilai(siswa_id: i64, mapel_id: i64) -> SqlResult<AkumulasiNilai> {
-    let semester_list = vec![
-        ("4", 1), ("4", 2),
-        ("5", 1), ("5", 2),
-        ("6", 1), ("6", 2),
-    ];
-
+    info!("🔄 hitung_akumulasi_nilai START: siswa_id={}, mapel_id={}", siswa_id, mapel_id);
+    
+    // ⭐ AMBIL DATA SEMESTER DULU (dengan lock)
+    let semester_list = {
+        let db = database::get_db();
+        let db_lock = db.lock().unwrap();
+        
+        if let Some(ref conn) = *db_lock {
+            let query = "
+                SELECT DISTINCT kelas, semester, tahun_ajaran
+                FROM nilai
+                WHERE siswa_id = ?1 AND mapel_id = ?2
+                  AND (kelas LIKE '4%' OR kelas LIKE '5%' OR kelas LIKE '6%')
+                ORDER BY 
+                    CAST(SUBSTR(kelas, 1, 1) AS INTEGER) ASC,
+                    semester ASC
+            ";
+            
+            let mut stmt = conn.prepare(query)?;
+            let rows = stmt.query_map(params![siswa_id, mapel_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i32>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?;
+            
+            rows.collect::<SqlResult<Vec<_>>>()
+        } else {
+            Err(rusqlite::Error::InvalidQuery)
+        }
+    }?; // ← Lock dilepas di sini!
+    
+    // ⭐ PROSES TIAP SEMESTER TANPA LOCK
     let mut nilai_per_semester = Vec::new();
     let mut total_nilai = 0.0;
     let mut jumlah_semester = 0;
-
-    // Get kelas siswa saat ini
-    let siswa_kelas = get_siswa_kelas(siswa_id)?;
-
-    for (tingkat_str, semester) in semester_list {
-        let tingkat_siswa = extract_tingkat_kelas(&siswa_kelas)
-            .map_err(|e| rusqlite::Error::InvalidParameterName(e))?;
-        let tingkat_target: i32 = tingkat_str.parse().unwrap();
-
-        if tingkat_siswa != tingkat_target {
-            continue;
-        }
-
-        // Cari tahun ajaran untuk semester ini
-        if let Some(tahun_ajaran) = get_tahun_ajaran_for_semester(siswa_id, mapel_id, tingkat_str, semester)? {
-            match hitung_komponen_nilai_semester(siswa_id, mapel_id, &siswa_kelas, semester, &tahun_ajaran) {
-                Ok(komponen_nilai) => {
-                    nilai_per_semester.push(NilaiPerSemester {
-                        kelas: siswa_kelas.clone(),
-                        semester,
-                        tahun_ajaran: tahun_ajaran.clone(),
-                        nilai_akademik: komponen_nilai.nilai_akademik,
-                    });
-
-                    total_nilai += komponen_nilai.nilai_akademik;
-                    jumlah_semester += 1;
-                }
-                Err(e) => {
-                    debug!("Skip semester {}-{}: {}", tingkat_str, semester, e);
-                }
+    
+    for (kelas, semester, tahun_ajaran) in semester_list {
+        info!("  📊 Processing: kelas={}, semester={}, tahun={}", kelas, semester, tahun_ajaran);
+        
+        match hitung_komponen_nilai_semester(
+            siswa_id,
+            mapel_id,
+            &kelas,
+            semester,
+            &tahun_ajaran,
+        ) {
+            Ok(komponen) => {
+                info!("    ✅ Nilai: {}", komponen.nilai_akademik);
+                
+                nilai_per_semester.push(NilaiPerSemester {
+                    kelas: kelas.clone(),
+                    semester,
+                    tahun_ajaran: tahun_ajaran.clone(),
+                    nilai_akademik: komponen.nilai_akademik,
+                });
+                
+                total_nilai += komponen.nilai_akademik;
+                jumlah_semester += 1;
+            }
+            Err(e) => {
+                info!("    ⚠️ Skip: {}", e);
             }
         }
     }
-
+    
     let rata_akumulasi = if jumlah_semester > 0 {
         (total_nilai / jumlah_semester as f64 * 100.0).round() / 100.0
     } else {
         0.0
     };
-
+    
+    info!("✅ hitung_akumulasi_nilai DONE: {} semester, rata={}", jumlah_semester, rata_akumulasi);
+    
     Ok(AkumulasiNilai {
         nilai_per_semester,
         jumlah_semester,
@@ -866,33 +960,42 @@ fn get_tahun_ajaran_for_semester(
 
 /// Hitung nilai akhir kelulusan
 /// Formula: (Rata 6 Semester × 60%) + (Ujian Sekolah × 40%)
+/// Hitung nilai akhir kelulusan - FIXED
 pub fn hitung_nilai_akhir_kelulusan(siswa_id: i64, mapel_id: i64) -> SqlResult<NilaiAkhirKelulusan> {
-    let akumulasi = hitung_akumulasi_nilai(siswa_id, mapel_id)?;
-
-    // Get nilai Ujian Sekolah
-    let db = database::get_db();
-    let db_lock = db.lock().unwrap();
+    info!("    🔍 hitung_nilai_akhir_kelulusan: siswa_id={}, mapel_id={}", siswa_id, mapel_id);
     
-    let nilai_ujian_sekolah = if let Some(ref conn) = *db_lock {
-        let result: Result<Vec<f64>, _> = conn
-            .prepare(
-                "SELECT nilai FROM nilai
-                 WHERE siswa_id = ?1 AND mapel_id = ?2
-                   AND kelas LIKE '6%' AND semester = 2 AND jenis = 'Ujian Sekolah'"
-            )?
-            .query_map(params![siswa_id, mapel_id], |row| row.get(0))?
-            .collect();
+    // Hitung akumulasi
+    let akumulasi = hitung_akumulasi_nilai(siswa_id, mapel_id)?;
+    info!("    📊 Akumulasi: {} semester, rata={}", akumulasi.jumlah_semester, akumulasi.rata_akumulasi);
 
-        match result {
-            Ok(nilai_list) if !nilai_list.is_empty() => {
-                let total: f64 = nilai_list.iter().sum();
-                total / nilai_list.len() as f64
+    // ✅ FIXED: Query ujian sekolah dalam scope terpisah
+    let nilai_ujian_sekolah = {
+        let db = database::get_db();
+        let db_lock = db.lock().unwrap();
+        
+        if let Some(ref conn) = *db_lock {
+            let result: Result<Vec<f64>, _> = conn
+                .prepare(
+                    "SELECT nilai FROM nilai
+                     WHERE siswa_id = ?1 AND mapel_id = ?2
+                       AND kelas LIKE '6%' AND semester = 2 AND jenis = 'Ujian Sekolah'"
+                )?
+                .query_map(params![siswa_id, mapel_id], |row| row.get(0))?
+                .collect();
+
+            match result {
+                Ok(nilai_list) if !nilai_list.is_empty() => {
+                    let total: f64 = nilai_list.iter().sum();
+                    total / nilai_list.len() as f64
+                }
+                _ => 0.0,
             }
-            _ => 0.0,
+        } else {
+            0.0
         }
-    } else {
-        0.0
-    };
+    }; // ← Lock released
+
+    info!("    📊 Ujian Sekolah: {}", nilai_ujian_sekolah);
 
     let nilai_akhir = (akumulasi.rata_akumulasi * BOBOT_AKUMULASI_SEMESTER) 
                     + (nilai_ujian_sekolah * BOBOT_UJIAN_SEKOLAH_KELULUSAN);
@@ -905,6 +1008,8 @@ pub fn hitung_nilai_akhir_kelulusan(siswa_id: i64, mapel_id: i64) -> SqlResult<N
     } else {
         "TIDAK LULUS".to_string()
     };
+    
+    info!("    ✅ Nilai akhir: {}, status: {}", nilai_akhir_rounded, status_kelulusan);
 
     Ok(NilaiAkhirKelulusan {
         akumulasi_6_semester: akumulasi,
@@ -1008,56 +1113,6 @@ pub fn save_kehadiran(
                 total: total_pertemuan,
             },
         })
-    } else {
-        Err(rusqlite::Error::InvalidQuery)
-    }
-}
-
-/// Get kehadiran siswa
-/// Get kehadiran siswa
-pub fn get_kehadiran(
-    siswa_id: i64,
-    kelas: &str,
-    semester: i32,
-    tahun_ajaran: &str,
-) -> SqlResult<Option<KehadiranData>> {
-    let db = database::get_db();
-    let db_lock = db.lock().unwrap();
-    
-    if let Some(ref conn) = *db_lock {
-        // ✅ FIXED: Filter dengan mapel_id IS NULL
-        let result = conn.query_row(
-            "SELECT id, nilai, hadir, sakit, izin, alpa
-             FROM nilai
-             WHERE siswa_id = ?1 AND mapel_id IS NULL 
-               AND kelas = ?2 AND semester = ?3 
-               AND tahun_ajaran = ?4 AND jenis = 'Kehadiran'",
-            params![siswa_id, kelas, semester, tahun_ajaran],
-            |row| {
-                let hadir: i32 = row.get(2).unwrap_or(0);
-                let sakit: i32 = row.get(3).unwrap_or(0);
-                let izin: i32 = row.get(4).unwrap_or(0);
-                let alpa: i32 = row.get(5).unwrap_or(0);
-
-                Ok(KehadiranData {
-                    id: Some(row.get(0)?),
-                    nilai: row.get(1)?,
-                    breakdown: KehadiranBreakdown {
-                        hadir,
-                        sakit,
-                        izin,
-                        alpa,
-                        total: hadir + sakit + izin + alpa,
-                    },
-                })
-            },
-        );
-
-        match result {
-            Ok(data) => Ok(Some(data)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(e),
-        }
     } else {
         Err(rusqlite::Error::InvalidQuery)
     }
@@ -1419,15 +1474,25 @@ pub fn cek_kenaikan_kelas(
 }
 
 /// Cek kelulusan siswa (Kelas 6)
+/// Cek kelulusan siswa (Kelas 6) - SESUAI ORIGINAL JS
 pub fn cek_kelulusan(siswa_id: i64) -> SqlResult<StatusKelulusan> {
+    info!("🔍 cek_kelulusan START for siswa_id={}", siswa_id);
+    
     let mapel_list = get_all_mapel()?;
+    info!("📚 Total mapel: {}", mapel_list.len());
+    
     let mut hasil_per_mapel = Vec::new();
     let mut jumlah_lulus = 0;
     let mut jumlah_tidak_lulus = 0;
 
-    for mapel in &mapel_list {
+    for (idx, mapel) in mapel_list.iter().enumerate() {
+        info!("  🔄 Processing mapel {}/{}: {}", idx + 1, mapel_list.len(), mapel.nama);
+        
+        // ✅ SESUAI ORIGINAL: Langsung coba hitung, handle error di match
         match hitung_nilai_akhir_kelulusan(siswa_id, mapel.id) {
             Ok(nilai_akhir) => {
+                info!("    ✅ Nilai akhir: {} ({})", nilai_akhir.nilai_akhir, nilai_akhir.status_kelulusan);
+                
                 if nilai_akhir.status_kelulusan == "LULUS" {
                     jumlah_lulus += 1;
                 } else {
@@ -1444,23 +1509,27 @@ pub fn cek_kelulusan(siswa_id: i64) -> SqlResult<StatusKelulusan> {
                 });
             }
             Err(e) => {
-                debug!("Skip mapel {}: {}", mapel.nama, e);
+                info!("    ⚠️ Skip mapel {}: {}", mapel.nama, e);
             }
         }
     }
-
-    let total_mapel = mapel_list.len();
+    
+    let total_mapel = hasil_per_mapel.len();
     let persen_lulus = if total_mapel > 0 {
         ((jumlah_lulus as f64 / total_mapel as f64) * 100.0).round()
     } else {
         0.0
     };
 
-    let status_kelulusan = if jumlah_tidak_lulus == 0 && jumlah_lulus > 0 {
+    let status_kelulusan = if total_mapel == 0 {
+        "BELUM ADA DATA".to_string()
+    } else if jumlah_tidak_lulus == 0 && jumlah_lulus > 0 {
         "LULUS".to_string()
     } else {
         "TIDAK LULUS".to_string()
     };
+    
+    info!("✅ cek_kelulusan DONE: total_mapel={}, lulus={}, status={}", total_mapel, jumlah_lulus, status_kelulusan);
 
     Ok(StatusKelulusan {
         siswa_id,

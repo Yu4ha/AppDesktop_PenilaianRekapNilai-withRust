@@ -1,10 +1,11 @@
 /**
- * kelulusan.js - Fixed for Tauri
+ * kelulusan.js - Fixed for Tauri (Auto-load + Client-side Filter)
  * ============================================
  * Frontend Logic untuk Halaman Laporan Kelulusan
  * 
  * Fitur:
- * - Filter Kelas 6 + Tahun Ajaran
+ * - Auto-load semua data kelulusan saat halaman dibuka
+ * - Filter client-side (Kelas 6 + Tahun Ajaran)
  * - Tampilkan data kelulusan (akumulasi 6 semester + Ujian Sekolah)
  * - Ranking siswa berdasarkan nilai akhir kelulusan
  * - Statistik kelulusan (lulus/tidak lulus)
@@ -52,7 +53,7 @@ let currentFilter = {
   tahun_ajaran: null
 };
 
-let allLaporanKelulusan = [];
+let allLaporanKelulusan = []; // Data mentah dari backend
 let isLoading = false;
 
 // ==========================
@@ -61,9 +62,13 @@ let isLoading = false;
 (async () => {
   try {
     await initFilterControls();
-    // Tidak auto-load, tunggu user klik "Terapkan Filter"
+    
+    // ⭐ AUTO-LOAD semua data saat halaman dibuka
+    console.log('🚀 Auto-loading semua data kelulusan...');
+    await loadLaporanKelulusan();
+    
     initRefreshButton();
-    console.log('✅ Init complete. Click "Terapkan Filter" to load data.');
+    console.log('✅ Init complete with auto-loaded data');
   } catch (err) {
     console.error('Gagal inisialisasi halaman kelulusan:', err);
     showNotification('error', 'Gagal memuat halaman kelulusan');
@@ -194,7 +199,7 @@ async function initFilterControls() {
         
         <div class="col-md-4">
           <button id="btnApplyFilter" class="btn btn-primary w-100">
-            <i class="bi bi-arrow-repeat"></i> Terapkan Filter
+            <i class="bi bi-funnel"></i> Terapkan Filter
           </button>
         </div>
       </div>
@@ -207,14 +212,11 @@ async function initFilterControls() {
     }
 
     // Event listeners
-    document.getElementById('btnApplyFilter').addEventListener('click', applyFilter);
+    document.getElementById('btnApplyFilter').addEventListener('click', applyClientSideFilter);
     
-    // Apply on Enter key
-    ['filterKelas', 'filterTahunAjaran'].forEach(id => {
-      document.getElementById(id)?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') applyFilter();
-      });
-    });
+    // Apply on change (real-time filter)
+    document.getElementById('filterKelas')?.addEventListener('change', applyClientSideFilter);
+    document.getElementById('filterTahunAjaran')?.addEventListener('change', applyClientSideFilter);
 
     console.log('✅ Filter controls initialized');
 
@@ -225,9 +227,9 @@ async function initFilterControls() {
 }
 
 // ==========================
-// APPLY FILTER
+// APPLY CLIENT-SIDE FILTER
 // ==========================
-async function applyFilter() {
+function applyClientSideFilter() {
   try {
     const filterKelas = document.getElementById('filterKelas');
     const filterTahunAjaran = document.getElementById('filterTahunAjaran');
@@ -235,65 +237,20 @@ async function applyFilter() {
     currentFilter.kelas = filterKelas.value || null;
     currentFilter.tahun_ajaran = filterTahunAjaran.value;
 
-    console.log('Applying filter:', currentFilter);
+    console.log('Applying client-side filter:', currentFilter);
 
-    const btnApply = document.getElementById('btnApplyFilter');
-    const originalText = btnApply.innerHTML;
-    btnApply.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memuat...';
-    btnApply.disabled = true;
+    // Filter data yang sudah ada di memory
+    let filteredData = [...allLaporanKelulusan];
 
-    await loadLaporanKelulusan();
-
-    btnApply.innerHTML = originalText;
-    btnApply.disabled = false;
-
-    showNotification('success', 'Filter berhasil diterapkan');
-
-  } catch (err) {
-    console.error('Gagal apply filter:', err);
-    showNotification('error', 'Gagal menerapkan filter: ' + err.message);
-    
-    const btnApply = document.getElementById('btnApplyFilter');
-    if (btnApply) {
-      btnApply.innerHTML = '<i class="bi bi-arrow-repeat"></i> Terapkan Filter';
-      btnApply.disabled = false;
-    }
-  }
-}
-
-// ==========================
-// LOAD LAPORAN KELULUSAN
-// ==========================
-async function loadLaporanKelulusan() {
-  if (isLoading) {
-    console.warn('⚠️ Already loading, skipping duplicate call');
-    return;
-  }
-
-  isLoading = true;
-
-  try {
-    console.log('Loading laporan kelulusan...');
-    console.time('Load Duration');
-
-    // Call backend dengan Tauri API
-    console.log('🔄 Calling hitung_statistik_kelulusan...');
-    const data = await invokeCommand('hitung_statistik_kelulusan');
-    console.timeEnd('Load Duration');
-
-    console.log('Statistik kelulusan loaded:', data);
-
-    if (!data) {
-      throw new Error('Gagal memuat data kelulusan dari backend');
-    }
-
-    allLaporanKelulusan = data.detail || [];
-
-    // Filter berdasarkan kelas (jika ada)
-    let filteredData = allLaporanKelulusan;
+    // Filter by kelas
     if (currentFilter.kelas) {
-      filteredData = allLaporanKelulusan.filter(s => s.kelas === currentFilter.kelas);
+      filteredData = filteredData.filter(s => s.kelas === currentFilter.kelas);
     }
+
+    // Filter by tahun ajaran (jika diperlukan di masa depan)
+    // if (currentFilter.tahun_ajaran) {
+    //   filteredData = filteredData.filter(s => s.tahun_ajaran === currentFilter.tahun_ajaran);
+    // }
 
     // Sort by nilai akhir tertinggi
     filteredData.sort((a, b) => {
@@ -308,14 +265,74 @@ async function loadLaporanKelulusan() {
     });
 
     // Update UI
-    updateStatsBoxes(data, filteredData);
+    updateStatsBoxes(filteredData);
     updateFilterInfo(filteredData);
     renderTabelKelulusan(filteredData);
+
+    showNotification('success', 'Filter berhasil diterapkan');
+
+  } catch (err) {
+    console.error('Gagal apply filter:', err);
+    showNotification('error', 'Gagal menerapkan filter: ' + err.message);
+  }
+}
+
+// ==========================
+// LOAD LAPORAN KELULUSAN (BACKEND)
+// ==========================
+async function loadLaporanKelulusan() {
+  if (isLoading) {
+    console.warn('⚠️ Already loading, skipping duplicate call');
+    return;
+  }
+
+  isLoading = true;
+
+  try {
+    console.log('📡 Loading laporan kelulusan from backend...');
+    console.time('Load Duration');
+
+    // Show loading indicator
+    const tableBody = document.querySelector('.table tbody');
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="9" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 mb-0 text-muted">Memuat data kelulusan...</p>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Call backend dengan Tauri API
+    const data = await invokeCommand('hitung_statistik_kelulusan');
+    console.log('✅ JSON.stringify data:', JSON.stringify(data, null, 2));
+    console.log('✅ Raw data:', data);
+    console.log('✅ Data type:', typeof data);
+    console.log('✅ Data.detail:', data?.detail);
+    console.log('✅ Data keys:', Object.keys(data || {}));
+
+    console.timeEnd('Load Duration');
+
+    console.log('✅ Statistik kelulusan loaded:', data);
+
+    if (!data) {
+      throw new Error('Gagal memuat data kelulusan dari backend');
+    }
+
+    // Simpan data mentah
+    allLaporanKelulusan = data.detail || [];
+
+    // Apply filter client-side
+    applyClientSideFilter();
 
     console.log('✅ Laporan kelulusan loaded successfully');
 
   } catch (err) {
-    console.error('Gagal load laporan kelulusan:', err);
+    console.error('❌ Gagal load laporan kelulusan:', err);
     showNotification('error', 'Gagal memuat data kelulusan: ' + err.message);
     
     const tableBody = document.querySelector('.table tbody');
@@ -353,7 +370,7 @@ function getNilaiAkhirRataRata(siswa) {
 // ==========================
 // UPDATE STATS BOXES
 // ==========================
-function updateStatsBoxes(statistikKelulusan, filteredData) {
+function updateStatsBoxes(filteredData) {
   const statsBox = document.querySelector('.stats-container');
   if (!statsBox) return;
 
@@ -514,7 +531,7 @@ function renderTabelKelulusan(data) {
 window.showDetailKelulusan = async function(siswa_id) {
   try {
     // Call backend dengan Tauri API
-    const detail = await invokeCommand('get_rekap_kelulusan', { siswa_id });
+    const detail = await invokeCommand('get_rekap_kelulusan', { siswaId: siswa_id });
     
     if (!detail) {
       showNotification('error', 'Gagal memuat detail kelulusan');
@@ -643,7 +660,7 @@ window.printDetailKelulusan = async function(siswa_id) {
     }
 
     // Call backend dengan Tauri API
-    const detail = await invokeCommand('get_rekap_kelulusan', { siswa_id });
+    const detail = await invokeCommand('get_rekap_kelulusan', { siswaId: siswa_id });
     
     if (!detail) {
       throw new Error('Gagal memuat data kelulusan');
@@ -1096,6 +1113,7 @@ function initRefreshButton() {
       icon.classList.remove('bi-arrow-clockwise');
       btnRefresh.disabled = true;
 
+      // Reload from backend
       await loadLaporanKelulusan();
       showNotification('success', 'Data berhasil di-refresh');
 
@@ -1163,9 +1181,9 @@ function showNotification(type, message) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     loadLaporanKelulusan,
-    applyFilter,
+    applyClientSideFilter,
     currentFilter
   };
 }
 
-console.log('✅ kelulusan.js loaded successfully (Tauri Fixed)');
+console.log('✅ kelulusan.js loaded successfully (Auto-load + Client-side Filter)');
