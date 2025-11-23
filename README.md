@@ -1,4 +1,4 @@
-## 📁 **Struktur Folder Lengkap:**
+## 📂 **Struktur folder lengkap dari src-tauri:**
 ```
 src-tauri/
 ├── Cargo.toml              ⭐ Dependencies
@@ -29,8 +29,8 @@ src-tauri/
         ├── mod.rs          ⭐ Module export
         └── penilaian.rs    ⭐ Business logic (ranking, kelulusan)
 
-Folder root projek
-
+## 📁 **Struktur root folder projek:**
+```
 ppDesktop_PenilaianRekapNilai-withRust/
 ├── build/
 ├── node_modules/
@@ -38,6 +38,7 @@ ppDesktop_PenilaianRekapNilai-withRust/
 ├── package-lock.json
 ├── README.md
 ├── src-tauri/
+├── vite.config.js
 └── UI/
     ├── assets/
     ├── CSS/
@@ -66,7 +67,7 @@ ppDesktop_PenilaianRekapNilai-withRust/
 HOW TO RUN THIS APP
 ==============================================================
 
-Just type npm run tauri dev in your console, terminal, CMD, or any console you have.
+Just type npm run tauri dev in your console, terminal, CMD, notepad (just joke 😂) or any console you have.
 
 ==============================================================
 CARA MEMBANGUN APLIKASI DESKTOP SISPENILAN
