@@ -100,6 +100,66 @@ async function initializePage() {
 }
 
 // ==========================
+// CSS STYLES
+// ==========================
+const style = document.createElement('style');
+style.textContent = `
+
+  /* ✅ RANKING BADGE STYLES - LARGER */
+  .ranking-badge {
+    display: inline-block;
+    padding: 10px 16px;       
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 16px;         
+    min-width: 70px;          
+    text-align: center;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .ranking-gold {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #b8860b;
+    border: 2px solid #ffc107;
+    font-size: 15px;         
+    animation: pulse-gold 0.5s infinite;
+  }
+
+  .ranking-silver {
+    background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+    color: #555;
+    border: 2px solid #9e9e9e;
+    font-size: 15px;         
+  }
+
+  .ranking-bronze {
+    background: linear-gradient(135deg, #cd7f32 0%, #e6a85c 100%);
+    color: #654321;
+    border: 2px solid #b8732d;
+    font-size: 15px;          
+  }
+
+  .ranking-default {
+    background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+    color: #424242;
+    border: 1px solid #bdbdbd;
+  }
+
+  @keyframes pulse-gold {
+    0%, 100% {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    50% {
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+      transform: scale(1.07);
+    }
+  }
+ `;
+
+document.head.appendChild(style);
+
+// ==========================
 // RENDER FILTER SECTION
 // ==========================
 function renderFilterSection(daftarTahunAjaran, tahunAjaranAktif) {
@@ -168,7 +228,7 @@ function renderFilterSection(daftarTahunAjaran, tahunAjaranAktif) {
       <!-- Kanan: Action Buttons -->
       <div class="filter-buttons" style="display: flex; gap: 12px; flex-wrap: nowrap; align-items: flex-end;">
         <button type="button" id="btnApplyFilter" class="btn-filter" style="padding: 10px 24px; background:#0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 16px; white-space: nowrap; transition: background 0.3s;">
-          🔍 Terapkan
+          🔍 Tampilkan Data
         </button>
 
         <button type="button" id="btnExport" class="btn-export" style="padding: 10px 24px; background: #198754; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 16px; white-space: nowrap; transition: background 0.3s;">
@@ -181,6 +241,9 @@ function renderFilterSection(daftarTahunAjaran, tahunAjaranAktif) {
   console.log('✅ Filter section rendered');
 }
 
+// ==========================
+// UPDATE TABLE HEADER
+// ==========================
 // ==========================
 // UPDATE TABLE HEADER
 // ==========================
@@ -210,12 +273,22 @@ function updateTableHeader() {
     tableHeader.appendChild(th);
   });
 
-  // Add kehadiran breakdown columns
-  const kehadiranHeaders = ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Total', 'Nilai Kehadiran'];
-  kehadiranHeaders.forEach(label => {
+  // ✅ Add kehadiran breakdown columns dengan warna
+  const kehadiranHeaders = [
+    { label: 'Hadir', bg: '#4caf50', color: 'white' },
+    { label: 'Sakit', bg: '#ff9800', color: 'white' },
+    { label: 'Izin', bg: '#2196f3', color: 'white' },
+    { label: 'Alpa', bg: '#f44336', color: 'white' },
+    { label: 'Total', bg: '#9e9e9e', color: 'white' },
+    { label: 'Nilai', bg: '#673ab7', color: 'white' }
+  ];
+  
+  kehadiranHeaders.forEach(({ label, bg, color }) => {
     const th = document.createElement('th');
     th.className = 'kehadiran-header';
     th.textContent = label;
+    th.style.background = bg;
+    th.style.color = color;
     tableHeader.appendChild(th);
   });
 
@@ -228,7 +301,7 @@ function updateTableHeader() {
     tableHeader.appendChild(th);
   });
   
-  console.log('✅ Table header updated dengan', allMapel.length, 'mapel + Ranking column');
+  console.log('✅ Table header updated dengan', allMapel.length, 'mapel + Ranking column + Colored kehadiran headers');
 }
 
 // ==========================
@@ -411,7 +484,7 @@ async function loadRekapData() {
 }
 
 // ==========================
-// RENDER TABLE
+// RENDER TABLE (dengan dynamic badge status)
 // ==========================
 function renderTable(data) {
   const tbody = document.getElementById('rekapTableBody');
@@ -437,6 +510,47 @@ function renderTable(data) {
     return;
   }
 
+  // ✅ Helper: Map status badge berdasarkan filter
+  const getStatusBadgeConfig = (rawStatus, kelas, semester) => {
+    const tingkat = parseInt(String(kelas).charAt(0));
+    
+    // Semester 1: Naik Semester 2
+    if (semester === 1) {
+      if (rawStatus === 'Naik Kelas') {
+        return { class: 'bg-success', text: 'Naik Semester 2' };
+      } else if (rawStatus === 'Tidak Naik Kelas') {
+        return { class: 'bg-danger', text: 'Tidak Naik Semester 2' };
+      } else if (rawStatus === 'Belum Lengkap') {
+        return { class: 'bg-warning text-dark', text: 'Belum Lengkap' };
+      }
+    }
+    
+    // Semester 2 + Kelas 6: LULUS
+    if (semester === 2 && tingkat === 6) {
+      if (rawStatus === 'Naik Kelas') {
+        return { class: 'bg-success', text: 'LULUS' };
+      } else if (rawStatus === 'Tidak Naik Kelas') {
+        return { class: 'bg-danger', text: 'TIDAK LULUS' };
+      } else if (rawStatus === 'Belum Lengkap') {
+        return { class: 'bg-warning text-dark', text: 'Belum Lengkap' };
+      }
+    }
+    
+    // Semester 2 + Kelas 4/5: Naik Kelas
+    if (semester === 2 && (tingkat === 4 || tingkat === 5)) {
+      if (rawStatus === 'Naik Kelas') {
+        return { class: 'bg-success', text: 'Naik Kelas' };
+      } else if (rawStatus === 'Tidak Naik Kelas') {
+        return { class: 'bg-danger', text: 'Tidak Naik Kelas' };
+      } else if (rawStatus === 'Belum Lengkap') {
+        return { class: 'bg-warning text-dark', text: 'Belum Lengkap' };
+      }
+    }
+    
+    // Default fallback
+    return { class: 'bg-secondary', text: rawStatus || '-' };
+  };
+
   // Render each row
   data.forEach((siswa, index) => {
     const row = document.createElement('tr');
@@ -455,11 +569,20 @@ function renderTable(data) {
       if (rank === 3) return 'ranking-bronze';
       return 'ranking-default';
     };
+
+    const getRankingEmoji = (rank) => {
+      if (rank === 1) return '🥇';
+      if (rank === 2) return '🥈';
+      if (rank === 3) return '🥉';
+      return '';
+    };
     
-    const statusBadgeClass =
-      siswa.status_naik_kelas === 'Naik Kelas' ? 'bg-success' :
-      siswa.status_naik_kelas === 'Tidak Naik Kelas' ? 'bg-danger' : 
-      'bg-warning text-dark';
+    // ✅ Dynamic status badge berdasarkan filter
+    const statusConfig = getStatusBadgeConfig(
+      siswa.status_naik_kelas, 
+      siswa.kelas, 
+      currentFilter.semester
+    );
 
     // Fixed columns
     let html = `
@@ -484,20 +607,20 @@ function renderTable(data) {
       </td>`;
     });
 
-    // Kehadiran breakdown
+    // Kehadiran breakdown dengan warna sesuai header
     const k = siswa.kehadiran;
     html += `
-      <td class="text-center kehadiran-hadir">${k.hadir}</td>
-      <td class="text-center kehadiran-sakit">${k.sakit}</td>
-      <td class="text-center kehadiran-izin">${k.izin}</td>
-      <td class="text-center kehadiran-alpa">${k.alpa}</td>
-      <td class="text-center kehadiran-total">${k.total}</td>
-      <td class="text-center">
+      <td class="text-center" style="background: #e8f5e9; font-weight: 600; color: #2e7d32;">${k.hadir}</td>
+      <td class="text-center" style="background: #fff3e0; font-weight: 600; color: #ef6c00;">${k.sakit}</td>
+      <td class="text-center" style="background: #e3f2fd; font-weight: 600; color: #1565c0;">${k.izin}</td>
+      <td class="text-center" style="background: #ffebee; font-weight: 600; color: #c62828;">${k.alpa}</td>
+      <td class="text-center" style="background: #f5f5f5; font-weight: 600; color: #424242;">${k.total}</td>
+      <td class="text-center" style="background: #ede7f6; font-weight: 600;">
         <span class="nilai-badge ${getNilaiBadgeClass(k.nilai)}">${k.nilai.toFixed(2)}</span>
       </td>
     `;
 
-    // Summary columns dengan Ranking
+    // Summary columns dengan Ranking + Dynamic Status
     html += `
       <td class="text-center">
         ${siswa.rata_rata > 0 
@@ -507,13 +630,15 @@ function renderTable(data) {
       </td>
       <td class="text-center">
         ${siswa.ranking 
-          ? `<span class="ranking-badge ${getRankingBadgeClass(siswa.ranking)}">${siswa.ranking === 1 ? '🥇' : siswa.ranking === 2 ? '🥈' : siswa.ranking === 3 ? '🥉' : ''} #${siswa.ranking}</span>`
+          ? `<span class="ranking-badge ${getRankingBadgeClass(siswa.ranking)}">
+              ${getRankingEmoji(siswa.ranking)} #${siswa.ranking}
+            </span>`
           : '<span class="text-muted">-</span>'
         }
       </td>
       <td class="text-center"><strong>${siswa.predikat}</strong></td>
       <td class="text-center">
-        <span class="badge ${statusBadgeClass}">${siswa.status_naik_kelas}</span>
+        <span class="badge ${statusConfig.class}">${statusConfig.text}</span>
       </td>
     `;
 
@@ -521,14 +646,38 @@ function renderTable(data) {
     tbody.appendChild(row);
   });
   
-  console.log('✅ Table rendered:', data.length, 'rows dengan ranking');
+  console.log('✅ Table rendered:', data.length, 'rows dengan ranking dan dynamic status badge');
 }
 
 // ==========================
-// UPDATE SUMMARY
+// UPDATE SUMMARY (dengan dynamic label)
 // ==========================
 function updateSummary(data) {
   const total = data.length;
+  
+  // ✅ Tentukan label berdasarkan filter
+  let successLabel = 'Naik Kelas';
+  let failLabel = 'Tidak Naik';
+  
+  if (currentFilter.semester === 1) {
+    successLabel = 'Naik Semester 2';
+    failLabel = 'Tidak Naik Semester 2';
+  } else if (currentFilter.semester === 2) {
+    // Cek apakah ada siswa kelas 6
+    const hasKelas6 = data.some(d => {
+      const tingkat = parseInt(String(d.kelas).charAt(0));
+      return tingkat === 6;
+    });
+    
+    if (hasKelas6 && currentFilter.kelas && currentFilter.kelas.startsWith('6')) {
+      successLabel = 'LULUS';
+      failLabel = 'TIDAK LULUS';
+    } else {
+      successLabel = 'Naik Kelas';
+      failLabel = 'Tidak Naik';
+    }
+  }
+  
   const naikKelas = data.filter(d => d.status_naik_kelas === 'Naik Kelas').length;
   const tidakNaik = data.filter(d => d.status_naik_kelas === 'Tidak Naik Kelas').length;
   const belumLengkap = data.filter(d => d.status_naik_kelas === 'Belum Lengkap').length;
@@ -552,7 +701,7 @@ function updateSummary(data) {
     <div class="col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-success mb-2">✅ Naik Kelas</h6>
+          <h6 class="text-success mb-2">✅ ${successLabel}</h6>
           <h3 class="mb-0 text-success">${naikKelas}</h3>
         </div>
       </div>
@@ -560,7 +709,7 @@ function updateSummary(data) {
     <div class="col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-danger mb-2">❌ Tidak Naik</h6>
+          <h6 class="text-danger mb-2">❌ ${failLabel}</h6>
           <h3 class="mb-0 text-danger">${tidakNaik}</h3>
         </div>
       </div>
@@ -575,7 +724,7 @@ function updateSummary(data) {
     </div>
   `;
   
-  console.log('✅ Summary updated:', { total, naikKelas, tidakNaik, belumLengkap });
+  console.log('✅ Summary updated:', { total, successLabel, naikKelas, failLabel, tidakNaik, belumLengkap });
 }
 
 // ==========================

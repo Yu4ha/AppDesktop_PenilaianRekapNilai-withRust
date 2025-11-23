@@ -32,7 +32,18 @@
       "path": { "all": true },
       "shell": { "all": true },
       "http": { "all": true },
-      "process": { "all": true }
+      "process": { "all": true },
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
+      }
     },
     "security": {
       "csp": null

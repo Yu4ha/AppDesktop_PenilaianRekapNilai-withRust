@@ -5,6 +5,9 @@
  * ============================================
  */
 
+// ✅ Import Tauri API di awal (bukan dynamic import)
+import { appWindow } from '@tauri-apps/api/window';
+
 const currentPage = window.location.pathname.split("/").pop();
 const navLinks = document.querySelectorAll(".nav-item");
 
@@ -27,18 +30,12 @@ navLinks.forEach((link) => {
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   if (confirm("📝 Apakah kamu yakin ingin keluar dari aplikasi?")) {
     try {
-      // Import appWindow dari Tauri
-      const { appWindow } = await import('@tauri-apps/api/window');
-      
-      // Close aplikasi
+      // ✅ Langsung pakai appWindow yang sudah di-import
       await appWindow.close();
 
     } catch (err) {
       console.error('Error saat close aplikasi:', err);
-      
-      // Fallback: redirect ke halaman login jika close gagal
       alert('Gagal menutup aplikasi. Silakan close manual.');
-      window.location.href = 'index.html';
     }
   }
 });

@@ -697,13 +697,13 @@ function updateCalculations(siswaId) {
 }
 
 /* ============================
-   Save Function
+   Save Function - NO CONFIRM
    ============================ */
 async function handleSaveKehadiran(event) {
   event.preventDefault();
   
   if (isSaving) {
-    return showAlert('Sedang menyimpan, tunggu hingga proses selesai...');
+    return showAlert('⏳ Sedang menyimpan, tunggu hingga proses selesai...');
   }
 
   if (!filterKelas || !filterSemester || !filterTahunAjaran) {
@@ -758,10 +758,7 @@ async function handleSaveKehadiran(event) {
     return showAlert('⚠️ Tidak ada data kehadiran yang diisi.');
   }
 
-  if (!confirm(`Simpan ${payload.length} data kehadiran untuk Kelas ${filterKelas} Semester ${filterSemester} Tahun Ajaran ${filterTahunAjaran}?`)) {
-    return;
-  }
-
+  // ✅ REMOVED CONFIRM - Langsung proses
   isSaving = true;
   const submitBtn = form.querySelector('button[type="submit"]');
   if (submitBtn) {
@@ -774,7 +771,7 @@ async function handleSaveKehadiran(event) {
     let failedCount = 0;
     const errors = [];
 
-    // ✅ Loop save_kehadiran individual
+    // Loop save_kehadiran individual
     for (const data of payload) {
       try {
         await invokeCommand('save_kehadiran', {

@@ -6,11 +6,44 @@ mod models;
 mod commands;
 mod logic;
 
+use std::fs;
+use log::LevelFilter;
+
+fn setup_logger() -> Result<(), fern::InitError> {
+    let paths = database::DatabasePaths::new();
+    fs::create_dir_all(&paths.logs_dir).expect("Gagal membuat direktori logs");
+    
+    // File log dengan tanggal
+    let log_file = paths.logs_dir.join(
+        format!("app_{}.log", chrono::Local::now().format("%Y-%m-%d"))
+    );
+    
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{}][{}][{}] {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.target(),
+                message
+            ))
+        })
+        .level(LevelFilter::Info)
+        .level_for("hyper", LevelFilter::Warn)
+        .level_for("tokio", LevelFilter::Warn)
+        .chain(std::io::stdout())
+        .chain(fern::log_file(&log_file)?)
+        .apply()?;
+    
+    Ok(())
+}
+
 fn main() {
-        env_logger::Builder::from_default_env()
-        .filter_level(log::LevelFilter::Info)
-        .init();
-        
+    // Setup logger dulu sebelum init database
+    setup_logger().expect("Failed to setup logger");
+    
+    log::info!("=== Aplikasi Dimulai ===");
+    
     // Initialize database
     database::init_database(None).expect("Failed to initialize database");
 
@@ -47,10 +80,10 @@ fn main() {
             // === KEHADIRAN COMMANDS ===
             commands::nilai::save_kehadiran,
             commands::nilai::get_kehadiran,
-            commands::nilai::update_kehadiran,              // ✅ TAMBAH
+            commands::nilai::update_kehadiran,
             commands::nilai::delete_kehadiran,
-            commands::nilai::get_kehadiran_by_kelas,        // ✅ TAMBAH
-            commands::nilai::get_all_kehadiran,             // ✅ TAMBAH
+            commands::nilai::get_kehadiran_by_kelas,
+            commands::nilai::get_all_kehadiran,
             
             // === PERHITUNGAN NILAI COMMANDS ===
             commands::nilai::hitung_komponen_nilai_semester,
@@ -103,4 +136,6 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
+    
+    log::info!("=== Aplikasi Berhenti ===");
 }

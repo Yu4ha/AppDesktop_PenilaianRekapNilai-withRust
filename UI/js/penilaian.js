@@ -568,7 +568,7 @@ async function savePopupTugas() {
     const { siswa_id, mapel_id, tugasList } = currentPopupData;
 
     if (!siswa_id || !mapel_id) {
-      showAlert('Data tidak valid');
+      showAlert('⚠️ Data tidak valid');
       return;
     }
 
@@ -578,10 +578,11 @@ async function savePopupTugas() {
     });
 
     if (validTugas.length === 0) {
-      showAlert('Minimal 1 tugas harus diisi dengan nilai valid (0-100)');
+      showAlert('⚠️ Minimal 1 tugas harus diisi dengan nilai valid (0-100)');
       return;
     }
 
+    // ✅ REMOVED CONFIRM - Langsung proses
     const existingTugas = allNilai.filter(n => 
       n.siswa_id === siswa_id && 
       n.mapel_id === mapel_id && 
@@ -1072,7 +1073,7 @@ function renderTabelInputNilai() {
 }
 
 /* ============================
-   Render Riwayat Nilai (Layout v7)
+   Render Riwayat Nilai (Layout v7 - Matching Input Nilai)
    ============================ */
 function renderRiwayatNilai() {
   const tbody = document.getElementById('nilaiTableBody');
@@ -1101,13 +1102,21 @@ function renderRiwayatNilai() {
     return;
   }
 
-  const filteredNilai = allNilai.filter(n => 
-    n.kelas === filterKelas && 
-    String(n.semester) === String(filterSemester) && 
-    n.tahun_ajaran === filterTahunAjaran
-  );
+  if (!allSiswa.length || !allMapel.length || !allJenisNilai.length) {
+    tbody.innerHTML = `<tr><td colspan="999">⚠️ Data belum tersedia.</td></tr>`;
+    return;
+  }
 
-  // HEADER ROW 1: Nama Mapel
+  const filteredSiswa = allSiswa.filter(s => s.kelas === filterKelas);
+
+  if (filteredSiswa.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="999" style="padding: 40px; text-align: center; color: #999;">
+      📭 Tidak ada siswa di kelas <strong>${filterKelas}</strong>
+    </td></tr>`;
+    return;
+  }
+
+  // HEADER ROW 1: Nama Mapel (colspan = jumlah jenis nilai)
   const row1 = document.createElement('tr');
   row1.innerHTML = `
     <th rowspan="2">No</th>
@@ -1130,7 +1139,24 @@ function renderRiwayatNilai() {
   
   thead.appendChild(row1);
 
+  // HEADER ROW 2: Jenis Nilai (Tugas, UTS, UAS, dll)
+  const row2 = document.createElement('tr');
+  allMapel.forEach(() => {
+    allJenisNilai.forEach(jenis => {
+      const th = document.createElement('th');
+      th.textContent = jenis;
+      row2.appendChild(th);
+    });
+  });
+  thead.appendChild(row2);
+
   // BODY: Siswa Rows dengan Nilai (Display Only)
+  const filteredNilai = allNilai.filter(n => 
+    n.kelas === filterKelas && 
+    String(n.semester) === String(filterSemester) && 
+    n.tahun_ajaran === filterTahunAjaran
+  );
+
   const nilaiMap = {};
   filteredNilai.forEach(n => {
     if (n.jenis !== 'Tugas') {
@@ -1139,15 +1165,6 @@ function renderRiwayatNilai() {
     }
   });
   
-  const filteredSiswa = allSiswa.filter(s => s.kelas === filterKelas);
-
-  if (filteredSiswa.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="999" style="padding: 40px; text-align: center; color: #999;">
-      📭 Tidak ada siswa di kelas <strong>${filterKelas}</strong>
-    </td></tr>`;
-    return;
-  }
-
   filteredSiswa.forEach((siswa, idx) => {
     const tr = document.createElement('tr');
     
@@ -1275,7 +1292,7 @@ async function handleSaveAll(event) {
   event.preventDefault();
   
   if (isSaving) {
-    return showAlert('Sedang menyimpan, tunggu hingga proses selesai...');
+    return showAlert('⏳ Sedang menyimpan, tunggu hingga proses selesai...');
   }
 
   if (!filterKelas || !filterSemester || !filterTahunAjaran) {
@@ -1306,7 +1323,7 @@ async function handleSaveAll(event) {
 
     const nilaiNum = Number(nilaiRaw);
     if (!Number.isFinite(nilaiNum) || nilaiNum < VALID_NILAI_MIN || nilaiNum > VALID_NILAI_MAX) {
-      showAlert(`Nilai tidak valid. Pastikan 0–100.`);
+      showAlert(`⚠️ Nilai tidak valid. Pastikan 0–100.`);
       input.focus();
       return;
     }
@@ -1327,8 +1344,7 @@ async function handleSaveAll(event) {
     return showAlert('⚠️ Tidak ada nilai yang diisi.');
   }
 
-  if (!confirm(`Kirim ${payload.length} nilai untuk Kelas ${filterKelas} Semester ${filterSemester}?`)) return;
-
+  // ✅ REMOVED CONFIRM - Langsung proses
   isSaving = true;
   const submitBtn = document.querySelector('#nilaiTableForm button[type="submit"]');
   if (submitBtn) {
@@ -1383,8 +1399,9 @@ function attachDeleteHandlers() {
 
   async function onDeleteClick(e) {
     const id = parseInt(e.currentTarget.dataset.id, 10);
-    if (!Number.isFinite(id)) return showAlert('ID tidak valid untuk penghapusan.');
+    if (!Number.isFinite(id)) return showAlert('⚠️ ID tidak valid untuk penghapusan.');
 
+    // ✅ TETAP PAKAI CONFIRM untuk delete
     if (!confirm('⚠️ Yakin ingin menghapus data nilai ini?')) return;
 
     try {
@@ -1416,9 +1433,10 @@ function attachDeleteHandlersBulk() {
     const tahunAjaran = e.currentTarget.dataset.tahunAjaran;
 
     if (!Number.isFinite(siswaId)) {
-      return showAlert('ID siswa tidak valid.');
+      return showAlert('⚠️ ID siswa tidak valid.');
     }
 
+    // ✅ TETAP PAKAI CONFIRM untuk bulk delete
     if (!confirm('⚠️ Yakin ingin menghapus SEMUA nilai siswa ini?')) return;
 
     try {
@@ -1430,7 +1448,7 @@ function attachDeleteHandlersBulk() {
       );
 
       if (nilaiToDelete.length === 0) {
-        return showAlert('Tidak ada nilai untuk dihapus.');
+        return showAlert('⚠️ Tidak ada nilai untuk dihapus.');
       }
 
       for (const nilai of nilaiToDelete) {
