@@ -1,5 +1,5 @@
 /* ==========================================
-   GLOBAL STYLES
+   GLOBAL STYLES - FULLY RESPONSIVE
    ========================================== */
 * {
   margin: 0;
@@ -7,97 +7,164 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* Responsive spacing */
+  --spacing-xs: clamp(0.25rem, 0.5vw, 0.5rem);
+  --spacing-sm: clamp(0.5rem, 1vw, 1rem);
+  --spacing-md: clamp(1rem, 2vw, 1.5rem);
+  --spacing-lg: clamp(1.5rem, 3vw, 2.5rem);
+  --spacing-xl: clamp(2rem, 4vw, 3rem);
+  
+  /* Responsive font sizes */
+  --font-xs: clamp(0.75rem, 1.5vw, 0.875rem);
+  --font-sm: clamp(0.875rem, 1.8vw, 1rem);
+  --font-base: clamp(0.938rem, 2vw, 1.125rem);
+  --font-lg: clamp(1.125rem, 2.5vw, 1.5rem);
+  --font-xl: clamp(1.5rem, 3.5vw, 2rem);
+  --font-2xl: clamp(1.875rem, 4.5vw, 2.5rem);
+  
+  /* Sidebar width */
+  --sidebar-width: clamp(200px, 20vw, 260px);
+  --sidebar-collapsed: 70px;
+  
+  /* Colors */
+  --primary-bg: rgba(6, 21, 44, 0.962);
+  --primary-blue: #3498db;
+  --success-green: #27ae60;
+  --danger-red: #e74c3c;
+  --warning-orange: #f39c12;
+  --text-dark: #2c3e50;
+  --text-muted: #7f8c8d;
+  --border-color: #e1e8ed;
+  --bg-light: #f5f7fa;
+  --white: #ffffff;
+}
+
 body.app-layout {
   display: flex;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f7fa;
-  color: #333;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  font-size: var(--font-base);
+  overflow-x: hidden;
 }
 
 /* ==========================================
-   SIDEBAR STYLES
+   SIDEBAR STYLES - COMPACT & FIT TO SCREEN
    ========================================== */
 .sidebar {
-  width: 260px;
-  background: rgba(27, 42, 70, 0.962);
-  color: white;
+  width: var(--sidebar-width);
+  background: var(--primary-bg);
+  color: var(--white);
   display: flex;
   flex-direction: column;
   position: fixed;
   height: 100vh;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease;
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .sidebar-header {
-  padding: 30px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.562);
+  padding: clamp(12px, 2vh, 20px) clamp(10px, 1.5vw, 15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .sidebar-header h2 {
-  font-size: 20px;
+  font-size: clamp(14px, 2.5vh, 18px);
   font-weight: 600;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Navigation */
+/* Navigation - COMPACT SIZE */
 .nav {
-  flex: 1;
-  padding: 20px 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: clamp(8px, 1.5vh, 15px) 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 15px 25px;
+  padding: clamp(6px, 1.2vh, 10px) clamp(12px, 2vw, 18px);
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
-  gap: 15px;
+  gap: clamp(8px, 1.5vw, 12px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: clamp(32px, 5vh, 42px);
 }
 
 .nav-item .icon {
-  font-size: 20px;
+  font-size: clamp(14px, 2.2vh, 18px);
   flex-shrink: 0;
+  width: clamp(16px, 2.5vh, 20px);
+  text-align: center;
 }
 
 .nav-item .label {
-  font-size: 15px;
+  font-size: clamp(12px, 1.8vh, 14px);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .nav-item:hover {
   background-color: rgba(255, 255, 255, 0.1);
-  color: white;
+  color: var(--white);
 }
 
 .nav-item.active {
   background-color: rgba(255, 255, 255, 0.15);
-  border-left-color: #3498db;
-  color: white;
+  border-left-color: var(--primary-blue);
+  color: var(--white);
 }
 
-/* Sidebar Footer */
+/* Sidebar Footer - COMPACT */
 .sidebar-footer {
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.562);
+  padding: clamp(10px, 1.5vh, 15px);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .sidebar-footer button,
 #logoutBtn {
   width: 100%;
-  padding: 12px;
-  background-color: #e74c3c;
-  color: white;
+  padding: clamp(8px, 1.5vh, 11px);
+  background-color: var(--danger-red);
+  color: var(--white);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: clamp(12px, 1.8vh, 14px);
   font-weight: 500;
   transition: background-color 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-footer button:hover,
@@ -105,60 +172,301 @@ body.app-layout {
   background-color: #c0392b;
 }
 
+/* ==========================================
+   RESPONSIVE SIDEBAR - COMPACT SIZES
+   ========================================== */
+
+/* Large Desktop (1200px+) */
+@media (min-width: 1200px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+}
+
+/* Medium Desktop (1024px - 1199px) */
+@media (max-width: 1199px) {
+  :root {
+    --sidebar-width: 200px;
+  }
+  
+  .nav-item {
+    padding: clamp(6px, 1vh, 9px) clamp(10px, 1.8vw, 15px);
+  }
+}
+
+/* Tablet (768px - 1023px) */
+@media (max-width: 1023px) {
+  :root {
+    --sidebar-width: 180px;
+  }
+  
+  .sidebar-header h2 {
+    font-size: clamp(13px, 2vh, 16px);
+  }
+  
+  .nav-item .label {
+    font-size: clamp(11px, 1.6vh, 13px);
+  }
+  
+  .nav-item .icon {
+    font-size: clamp(13px, 2vh, 16px);
+  }
+}
+
+/* Mobile & Small Tablets (320px - 767px) */
+@media (max-width: 767px) {
+  .sidebar {
+    width: var(--sidebar-collapsed);
+  }
+
+  .sidebar-header {
+    padding: clamp(10px, 1.5vh, 15px) clamp(5px, 1vw, 10px);
+  }
+
+  .sidebar-header h2,
+  .nav-item .label {
+    display: none;
+  }
+
+  .sidebar-footer button,
+  #logoutBtn {
+    font-size: 0;
+    padding: clamp(10px, 1.5vh, 12px);
+  }
+
+  .sidebar-footer button::before,
+  #logoutBtn::before {
+    content: "🚪";
+    font-size: clamp(16px, 2.5vh, 18px);
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: clamp(8px, 1.2vh, 10px);
+    gap: 0;
+  }
+
+  .nav-item .icon {
+    margin: 0;
+  }
+  
+  .nav {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Landscape Mobile (Height < 500px) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    width: var(--sidebar-collapsed);
+  }
+  
+  .sidebar-header {
+    padding: 8px 5px;
+  }
+  
+  .sidebar-header h2,
+  .nav-item .label {
+    display: none;
+  }
+  
+  .nav {
+    padding: 5px 0;
+  }
+  
+  .nav-item {
+    padding: 5px;
+    min-height: 28px;
+    justify-content: center;
+  }
+  
+  .nav-item .icon {
+    font-size: 14px;
+  }
+  
+  .sidebar-footer {
+    padding: 8px;
+  }
+  
+  .sidebar-footer button,
+  #logoutBtn {
+    padding: 6px;
+    font-size: 0;
+  }
+  
+  .sidebar-footer button::before,
+  #logoutBtn::before {
+    content: "🚪";
+    font-size: 14px;
+  }
+}
+
+/* Portrait Mobile (Height < 600px) */
+@media (max-height: 600px) and (orientation: portrait) {
+  .sidebar-header {
+    padding: 10px;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 14px;
+  }
+  
+  .nav {
+    padding: 8px 0;
+  }
+  
+  .nav-item {
+    padding: 6px 12px;
+    min-height: 34px;
+  }
+  
+  .nav-item .icon {
+    font-size: 14px;
+  }
+  
+  .nav-item .label {
+    font-size: 11px;
+  }
+  
+  .sidebar-footer {
+    padding: 10px;
+  }
+  
+  .sidebar-footer button,
+  #logoutBtn {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+/* Extra Small Mobile (< 320px) */
+@media (max-width: 319px) {
+  .sidebar {
+    width: 55px;
+  }
+  
+  .nav-item .icon {
+    font-size: 13px;
+  }
+  
+  .nav-item {
+    min-height: 30px;
+  }
+}
+
+/* Very Short Screens (Height < 450px) */
+@media (max-height: 450px) {
+  .sidebar-header {
+    padding: 6px 8px;
+  }
+  
+  .sidebar-header h2 {
+    font-size: 12px;
+  }
+  
+  .nav {
+    padding: 4px 0;
+  }
+  
+  .nav-item {
+    padding: 4px 10px;
+    min-height: 28px;
+    gap: 6px;
+  }
+  
+  .nav-item .icon {
+    font-size: 12px;
+    width: 14px;
+  }
+  
+  .nav-item .label {
+    font-size: 10px;
+  }
+  
+  .sidebar-footer {
+    padding: 6px;
+  }
+  
+  .sidebar-footer button,
+  #logoutBtn {
+    padding: 6px;
+    font-size: 11px;
+  }
+}
 
 /* ==========================================
-   MAIN CONTENT
+   SMOOTH SCROLLING
+   ========================================== */
+.nav {
+  scroll-behavior: smooth;
+  scroll-padding: 5px 0;
+}
+
+/* ==========================================
+   MAIN CONTENT - FULLY RESPONSIVE
    ========================================== */
 .main-content {
-  margin-left: 260px;
+  margin-left: var(--sidebar-width);
   flex: 1;
-  padding: 30px 40px;
+  padding: var(--spacing-lg) clamp(20px, 4vw, 40px);
   overflow-y: auto;
+  overflow-x: hidden;
+  width: calc(100% - var(--sidebar-width));
+  transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
 header h1 {
-  font-size: 32px;
-  color: #2c3e50;
-  margin-bottom: 10px;
+  font-size: var(--font-2xl);
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-sm);
   font-weight: 600;
+  word-wrap: break-word;
 }
 
 header .subtitle {
-  color: #7f8c8d;
-  margin-top: 5px;
-  font-size: 15px;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-sm);
 }
 
 section {
-  font-size: 1rem;
+  font-size: var(--font-base);
   line-height: 1.6;
 }
 
-
 /* ==========================================
-   ACTION BAR & SEARCH
+   ACTION BAR & SEARCH - RESPONSIVE
    ========================================== */
 .action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 30px 0 20px 0;
-  gap: 20px;
+  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .btn-add {
-  padding: 12px 24px;
-  background-color: #27ae60;
-  color: white;
+  padding: clamp(10px, 1.5vw, 12px) clamp(16px, 2.5vw, 24px);
+  background-color: var(--success-green);
+  color: var(--white);
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s, transform 0.2s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
 }
 
 .btn-add:hover {
@@ -168,65 +476,65 @@ section {
 
 .search-box {
   flex: 1;
-  max-width: 400px;
+  max-width: min(100%, 400px);
+  min-width: min(100%, 200px);
 }
 
 .search-box input {
   width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e1e8ed;
+  padding: clamp(10px, 1.5vw, 12px) clamp(12px, 2vw, 15px);
+  border: 2px solid var(--border-color);
   border-radius: 8px;
-  font-size: 15px;
+  font-size: var(--font-sm);
   transition: border-color 0.3s;
-  background-color: white;
+  background-color: var(--white);
 }
 
 .search-box input:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--primary-blue);
 }
 
-
 /* ==========================================
-   FORM STYLES
+   FORM STYLES - RESPONSIVE
    ========================================== */
 .form-container {
-  background: white;
-  padding: 30px;
+  background: var(--white);
+  padding: var(--spacing-lg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-top: 30px;
-  max-width: 600px;
+  margin-top: var(--spacing-lg);
+  max-width: min(100%, 600px);
 }
 
 .form-container h2 {
-  font-size: 22px;
-  color: #2c3e50;
-  margin-bottom: 25px;
+  font-size: var(--font-xl);
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-lg);
   font-weight: 600;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
-  color: #2c3e50;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-dark);
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--font-sm);
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e1e8ed;
+  padding: clamp(10px, 1.5vw, 12px) clamp(12px, 2vw, 15px);
+  border: 2px solid var(--border-color);
   border-radius: 8px;
-  font-size: 15px;
+  font-size: var(--font-sm);
   transition: border-color 0.3s, background-color 0.3s;
   background-color: #f8f9fa;
 }
@@ -234,22 +542,22 @@ section {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #3498db;
-  background-color: white;
+  border-color: var(--primary-blue);
+  background-color: var(--white);
 }
 
 .btn-primary {
   width: 100%;
-  padding: 14px;
-  background-color: #3498db;
-  color: white;
+  padding: clamp(12px, 2vw, 14px);
+  background-color: var(--primary-blue);
+  color: var(--white);
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: var(--font-base);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s, transform 0.2s;
-  margin-top: 10px;
+  margin-top: var(--spacing-sm);
 }
 
 .btn-primary:hover {
@@ -257,20 +565,19 @@ section {
   transform: translateY(-2px);
 }
 
-
 /* ==========================================
-   STATISTICS BOX (Dashboard)
+   STATISTICS BOX - RESPONSIVE GRID
    ========================================== */
 .stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin: 30px 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--spacing-md);
+  margin: var(--spacing-lg) 0;
 }
 
 .stat-box {
-  background: white;
-  padding: 25px;
+  background: var(--white);
+  padding: var(--spacing-lg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.3s, box-shadow 0.3s;
@@ -282,39 +589,39 @@ section {
 }
 
 .stat-box .icon-large {
-  font-size: 40px;
-  margin-bottom: 10px;
+  font-size: clamp(32px, 5vw, 40px);
+  margin-bottom: var(--spacing-sm);
 }
 
 .stat-box h3 {
-  font-size: 16px;
-  color: #7f8c8d;
-  margin-bottom: 8px;
+  font-size: var(--font-base);
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
   font-weight: 500;
 }
 
 .stat-box .value {
-  font-size: 36px;
+  font-size: clamp(28px, 4.5vw, 36px);
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
-
 /* ==========================================
-   TABLE STYLES
+   TABLE STYLES - RESPONSIVE
    ========================================== */
 .table-container {
-  background: white;
-  padding: 25px;
+  background: var(--white);
+  padding: var(--spacing-lg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-top: 30px;
+  margin-top: var(--spacing-lg);
+  overflow-x: auto;
 }
 
 .table-container h2 {
-  font-size: 22px;
-  color: #2c3e50;
-  margin-bottom: 20px;
+  font-size: var(--font-xl);
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-md);
   font-weight: 600;
 }
 
@@ -322,15 +629,18 @@ section {
   width: 100%;
   margin: 0;
   border-collapse: collapse;
+  min-width: 600px;
 }
 
 .table thead th {
   background-color: #f8f9fa;
-  color: #2c3e50;
+  color: var(--text-dark);
   font-weight: 600;
   border-bottom: 2px solid #dee2e6;
-  padding: 15px;
+  padding: clamp(12px, 2vw, 15px);
   text-align: center;
+  font-size: var(--font-sm);
+  white-space: nowrap;
 }
 
 .table tbody tr {
@@ -344,52 +654,50 @@ section {
 }
 
 .table td {
-  padding: 15px;
+  padding: clamp(12px, 2vw, 15px);
   vertical-align: middle;
+  font-size: var(--font-sm);
 }
 
-
 /* ==========================================
-   BADGES & LABELS
+   BADGES & LABELS - RESPONSIVE
    ========================================== */
-/* Ranking Badge */
 .badge-rank {
   display: inline-block;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
+  width: clamp(25px, 4vw, 30px);
+  height: clamp(25px, 4vw, 30px);
+  line-height: clamp(25px, 4vw, 30px);
   text-align: center;
   border-radius: 50%;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-xs);
 }
 
 .rank-1 {
   background-color: #f1c40f;
-  color: white;
+  color: var(--white);
 }
 
 .rank-2 {
   background-color: #95a5a6;
-  color: white;
+  color: var(--white);
 }
 
 .rank-3 {
   background-color: #cd7f32;
-  color: white;
+  color: var(--white);
 }
 
 .rank-other {
   background-color: #ecf0f1;
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
-/* Nilai Badge */
 .nilai-badge {
-  padding: 5px 12px;
+  padding: clamp(4px, 0.8vw, 5px) clamp(10px, 1.5vw, 12px);
   border-radius: 20px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-xs);
 }
 
 .nilai-tinggi {
@@ -407,11 +715,10 @@ section {
   color: #721c24;
 }
 
-/* Jenis Penilaian Badge */
 .jenis-badge {
-  padding: 4px 10px;
+  padding: clamp(3px, 0.6vw, 4px) clamp(8px, 1.2vw, 10px);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: var(--font-xs);
   font-weight: 600;
 }
 
@@ -432,60 +739,204 @@ section {
 
 /* Action Buttons */
 .btn-action {
-  padding: 6px 12px;
+  padding: clamp(5px, 1vw, 6px) clamp(10px, 1.5vw, 12px);
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
-  margin-right: 5px;
+  font-size: var(--font-xs);
+  margin-right: var(--spacing-xs);
   transition: opacity 0.2s;
 }
 
 .btn-edit {
-  background-color: #f39c12;
-  color: white;
+  background-color: var(--warning-orange);
+  color: var(--white);
 }
 
 .btn-delete {
-  background-color: #e74c3c;
-  color: white;
+  background-color: var(--danger-red);
+  color: var(--white);
 }
 
 .btn-action:hover {
   opacity: 0.8;
 }
 
-/* Nilai Display */
 .nilai-display {
   font-weight: 600;
-  font-size: 15px;
-  color: #2c3e50;
+  font-size: var(--font-sm);
+  color: var(--text-dark);
 }
 
+/* ==========================================
+   FILTER SECTION - RESPONSIVE
+   ========================================== */
+.filter-section {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-md);
+  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+  padding: var(--spacing-md);
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+  min-width: min(100%, 180px);
+}
+
+.filter-item label {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.filter-select {
+  padding: clamp(8px, 1.2vw, 10px) clamp(12px, 2vw, 15px);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: var(--font-sm);
+  transition: border-color 0.3s;
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background-color: var(--white);
+}
+
+.btn-export {
+  padding: clamp(8px, 1.2vw, 10px) clamp(16px, 2.5vw, 20px);
+  background-color: #16a085;
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  height: fit-content;
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  background-color: #138d75;
+}
 
 /* ==========================================
-   LAYOUT HELPERS
+   SUMMARY SECTION - RESPONSIVE GRID
+   ========================================== */
+.summary-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.summary-card {
+  background: var(--white);
+  padding: var(--spacing-md);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.summary-card:hover {
+  transform: translateY(-5px);
+}
+
+.summary-card h3 {
+  font-size: var(--font-base);
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.nilai-cell {
+  display: inline-block;
+  padding: clamp(3px, 0.6vw, 4px) clamp(6px, 1vw, 8px);
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+/* ==========================================
+   LAYOUT HELPERS - RESPONSIVE
    ========================================== */
 .content-wrapper {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  margin-top: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
 }
 
-
 /* ==========================================
-   RESPONSIVE DESIGN
+   RESPONSIVE BREAKPOINTS
    ========================================== */
+
+/* Large Tablets & Small Desktops (1024px - 1200px) */
 @media (max-width: 1200px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+  
   .content-wrapper {
     grid-template-columns: 1fr;
   }
+  
+  .stats-container {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  }
 }
 
-@media (max-width: 768px) {
+/* Tablets (768px - 1023px) */
+@media (max-width: 1023px) {
+  :root {
+    --sidebar-width: 200px;
+  }
+  
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    max-width: 100%;
+  }
+  
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-item {
+    min-width: 100%;
+  }
+  
+  .btn-export {
+    width: 100%;
+  }
+}
+
+/* Mobile & Small Tablets (481px - 767px) */
+@media (max-width: 767px) {
   .sidebar {
-    width: 70px;
+    width: var(--sidebar-collapsed);
   }
 
   .sidebar-header h2,
@@ -502,12 +953,12 @@ section {
   .sidebar-footer button::before,
   #logoutBtn::before {
     content: "🚪";
-    font-size: 20px;
+    font-size: clamp(18px, 3vw, 20px);
   }
 
   .nav-item {
     justify-content: center;
-    padding: 15px;
+    padding: var(--spacing-md);
     gap: 0;
   }
 
@@ -516,145 +967,139 @@ section {
   }
 
   .main-content {
-    margin-left: 70px;
-    padding: 20px;
+    margin-left: var(--sidebar-collapsed);
+    padding: var(--spacing-md);
+    width: calc(100% - var(--sidebar-collapsed));
   }
 
   .form-container,
   .table-container {
-    padding: 20px;
+    padding: var(--spacing-md);
   }
 
   .stats-container {
     grid-template-columns: 1fr;
   }
-
-  header h1 {
-    font-size: 24px;
-  }
-
-  .filter-section {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-item {
-    min-width: 100%;
-  }
-
+  
   .summary-section {
     grid-template-columns: 1fr;
   }
+  
+  .table {
+    font-size: var(--font-xs);
+  }
+  
+  .btn-action {
+    padding: 4px 8px;
+    font-size: 11px;
+    margin-right: 3px;
+  }
 }
 
-
-/* ==========================================
-   FILTER SECTION (Rekap Nilai)
-   ========================================== */
-.filter-section {
-  display: flex;
-  align-items: flex-end;
-  gap: 20px;
-  margin: 30px 0 20px 0;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  flex-wrap: wrap;
+/* Small Mobile (320px - 480px) */
+@media (max-width: 480px) {
+  :root {
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+  }
+  
+  .table-container {
+    padding: var(--spacing-sm);
+  }
+  
+  .form-container {
+    padding: var(--spacing-md);
+  }
+  
+  .stat-box {
+    padding: var(--spacing-md);
+  }
+  
+  .action-bar {
+    gap: var(--spacing-sm);
+  }
+  
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 200px;
+/* Extra Small Mobile (< 320px) */
+@media (max-width: 319px) {
+  .sidebar {
+    width: 60px;
+  }
+  
+  .main-content {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+    padding: var(--spacing-sm);
+  }
+  
+  .nav-item .icon {
+    font-size: 16px;
+  }
 }
 
-.filter-item label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
+/* Landscape Mobile Optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    width: var(--sidebar-collapsed);
+  }
+  
+  .sidebar-header h2,
+  .nav-item .label {
+    display: none;
+  }
+  
+  .main-content {
+    margin-left: var(--sidebar-collapsed);
+    width: calc(100% - var(--sidebar-collapsed));
+  }
+  
+  .nav {
+    padding: var(--spacing-sm) 0;
+  }
+  
+  .nav-item {
+    padding: var(--spacing-sm);
+  }
 }
 
-.filter-select {
-  padding: 10px 15px;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 15px;
-  transition: border-color 0.3s;
-  background-color: #f8f9fa;
-  cursor: pointer;
+/* High Resolution Displays (2K, 4K) */
+@media (min-width: 1920px) {
+  :root {
+    --sidebar-width: 280px;
+  }
+  
+  .main-content {
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: calc(var(--sidebar-width) + 40px);
+  }
 }
 
-.filter-select:focus {
-  outline: none;
-  border-color: #3498db;
-  background-color: white;
-}
-
-.btn-export {
-  padding: 10px 20px;
-  background-color: #16a085;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  height: fit-content;
-}
-
-.btn-export:hover {
-  background-color: #138d75;
-}
-
-
-/* ==========================================
-   NILAI CELL (Rekap Nilai)
-   ========================================== */
-.nilai-cell {
-  display: inline-block;
-  padding: 4px 8px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-
-/* ==========================================
-   SUMMARY SECTION (Rekap Nilai)
-   ========================================== */
-.summary-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 30px;
-}
-
-.summary-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  transition: transform 0.3s;
-}
-
-.summary-card:hover {
-  transform: translateY(-5px);
-}
-
-.summary-card h3 {
-  font-size: 16px;
-  color: #7f8c8d;
-  margin-bottom: 10px;
-  font-weight: 500;
-}
-
-.summary-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #2c3e50;
-  margin: 0;
+/* Print Styles */
+@media print {
+  .sidebar,
+  .action-bar,
+  .btn-action,
+  .btn-add,
+  .btn-export {
+    display: none;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .table-container,
+  .form-container,
+  .stat-box {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
 }
